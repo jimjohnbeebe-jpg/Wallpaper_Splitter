@@ -22,6 +22,8 @@ serde_json = "=1.0.154"
 image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "tiff", "webp"] }
 zune-jpeg = "=0.5.15"
 ultrahdr-rs = { version = "=0.3.5", default-features = false }
+# Iso21496Format / parse_iso21496 (Lightroom gain-map metadata) are not re-exported by ultrahdr-rs. Apache-2.0.
+ultrahdr-core = "=0.4.1"
 jxl-oxide = "=0.12.6"
 fast_image_resize = "=6.1.0"
 half = "=2.7.1"
@@ -33,6 +35,7 @@ windows = { version = "=0.62.2", features = [
   "Win32_Graphics_Imaging",
   "Win32_System_Com",
   "Win32_System_Com_StructuredStorage",
+  "Win32_System_Ole",
   "Win32_System_Registry",
   "Win32_System_Variant",
   "Win32_UI_HiDpi",
