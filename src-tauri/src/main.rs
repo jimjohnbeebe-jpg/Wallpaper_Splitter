@@ -3,9 +3,12 @@
 //   commands   the Tauri commands, thin wrappers over the modules below
 //   geometry   desk millimetres -> per-monitor crop rectangles and the span canvas (the only layout maths)
 //   monitors   connected monitors, EDID physical size, ids
-//   decode     every source format -> linear BT.709 f32 (+ SDR rendition)
+//   decode     sniffing, ImageInfo, preview proxies, loading every source format into a Source
+//   uhdr       Ultra HDR gain-map JPEG decode (ISO 21496-1 first) and encode (preview proxies)
+//   wic        Windows Imaging Component: AVIF decode, scRGB JPEG XR encode
+//   source     compact decoded pixels -> linear BT.709 f32 per crop, Lanczos3 resize
 //   color      transfer functions, gamut matrices, tone mapping
-//   export     resize, PNG/JPG/JXR writing, file naming
+//   export     PNG/JPG/JXR writing, file naming, the span image
 //   wallpaper  IDesktopWallpaper, JPEGImportQuality
 //   hdr        DisplayConfig HDR state per monitor
 //   settings   %APPDATA%\WallpaperSplitter\settings.json, atomic writes
@@ -22,7 +25,10 @@ mod model;
 mod monitors;
 mod preview;
 mod settings;
+mod source;
+mod uhdr;
 mod wallpaper;
+mod wic;
 
 fn main() {
     tauri::Builder::default()
