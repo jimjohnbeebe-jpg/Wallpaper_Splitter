@@ -13,6 +13,7 @@ SplitforDualMonitor28and32.py
 New folder/
 # ...except the app's own icons.
 !src-tauri/icons/*.png
+!docs/screenshots/*.png
 
 # Build output
 node_modules/
