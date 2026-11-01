@@ -55,6 +55,7 @@ fn main() {
             commands::export,
             commands::apply,
             commands::open_folder,
+            commands::is_packaged,
         ])
         .build(tauri::generate_context!())
         .expect("Wallpaper Splitter failed to start")

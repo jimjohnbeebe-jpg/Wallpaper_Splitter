@@ -4,7 +4,7 @@ A Windows 11 app that splits one image into per-monitor wallpapers. They line up
 
 - Product: `PRODUCT.md`.
 - Design tokens and rules: `DESIGN.md`. Use the tokens, never raw hex in components.
-- Plan of record: `C:\Users\jimbe\.claude\plans\iterative-cuddling-codd.md`.
+- Plan of record: `C:\Users\jimbe\.claude\plans\iterative-cuddling-codd.md`. It now holds the distribution plan; the v1 build plan is archived in the Obsidian vault at `Projects/Wallpaper_Splitter/PLAN.md`.
 
 ## Stack
 
@@ -50,6 +50,8 @@ cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings &
 
 - Version is in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, which must agree.
 - Tagging `v<version>` runs `.github/workflows/release.yml`. It builds the portable exe (`tauri build --no-bundle`) and attaches `WallpaperSplitter-<version>.exe` and `SHA256SUMS.txt` to a **draft** release.
+- When the repository variables `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME` are set (from Partner Center > Product identity), the release also builds `WallpaperSplitter-<version>.msix` for the Microsoft Store with `packaging/msix/stage.ps1`. The package is unsigned, because the Store signs it.
+- In the MSIX build, HKCU writes are virtualised, so `wallpaper::packaged()` turns the JPEG import fix off and the UI hides it.
 - Jim publishes the release himself. The exe is unsigned.
 
 ## Steps for Jim

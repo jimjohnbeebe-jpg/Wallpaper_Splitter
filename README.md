@@ -70,7 +70,11 @@ Leave the exported files where they are: Windows reads the wallpaper from them.
 - Preview cache (TIFF and JPEG XL): `%LOCALAPPDATA%\WallpaperSplitter\cache`
 - WebView data: `%LOCALAPPDATA%\com.jimbeebe.wallpapersplitter`
 
-To remove the app, delete the exe and those three folders. The app itself makes no network requests.
+To remove the app, delete the exe and those three folders. The Microsoft Store version keeps the same files inside its own package folder, and Windows removes them when you uninstall it. The app itself makes no network requests.
+
+## Thanks
+
+[Superpaper](https://github.com/hhannine/superpaper) showed how to correct for monitor size and bezels when spanning a wallpaper. Wallpaper Splitter takes that idea and adds HDR and a single portable exe.
 
 ## Build from source
 
@@ -84,3 +88,5 @@ npm run build   # → src-tauri\target\release\WallpaperSplitter.exe
 ## License
 
 MIT. The Inter font is under the SIL Open Font License 1.1 (`ui/fonts/LICENSE`). The photograph in the screenshots is © Jim Beebe, all rights reserved, and is not covered by the MIT licence.
+
+If it's useful to you, a ⭐ on the repo helps.

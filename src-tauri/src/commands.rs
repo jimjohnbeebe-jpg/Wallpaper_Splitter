@@ -157,12 +157,19 @@ pub async fn export(job: ExportJob) -> Res<ExportResult> {
     blocking(move || run_export(&job)).await
 }
 
+/// True in the Store (MSIX) build, where the UI hides the JPEG import fix.
+#[tauri::command]
+pub fn is_packaged() -> bool {
+    wallpaper::packaged()
+}
+
 /// Exports, then sets the files as the wallpaper (one per monitor, or the span image across them all).
 #[tauri::command]
 pub async fn apply(job: ExportJob) -> Res<ExportResult> {
     blocking(move || {
         let result = run_export(&job)?;
-        if matches!(job.prefs.format, ExportFormat::Jpg { .. }) && job.prefs.jpeg_import_fix {
+        let jpg = matches!(job.prefs.format, ExportFormat::Jpg { .. });
+        if jpg && job.prefs.jpeg_import_fix && !wallpaper::packaged() {
             wallpaper::set_jpeg_import_quality_100()?;
         }
         match (&result.span_file, job.prefs.span) {

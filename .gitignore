@@ -14,6 +14,7 @@ New folder/
 # ...except the app's own icons.
 !src-tauri/icons/*.png
 !docs/screenshots/*.png
+!packaging/msix/Assets/*.png
 
 # Build output
 node_modules/

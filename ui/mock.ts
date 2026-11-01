@@ -13,7 +13,7 @@ export const samsung: MonitorInfo = {
   px: { x: 3840, y: 0, w: 3840, h: 2160 }, scale: 1.5, primary: false, edidMm: { w: 632, h: 356 }, hdr: { supported: true, enabled: false },
 };
 
-export function mockApi(settings?: Partial<Settings>) {
+export function mockApi(settings?: Partial<Settings>, packaged = false) {
   const calls: [string, unknown[]][] = [];
   const log = <T>(name: string, args: unknown[], value: T): Promise<T> => { calls.push([name, args]); return Promise.resolve(value); };
   let stored: Settings = { version: 1, prefs: defaultPrefs(), last: null, recent: [], calibrations: {}, ...settings };
@@ -48,6 +48,7 @@ export function mockApi(settings?: Partial<Settings>) {
     exportTiles: (job) => log("exportTiles", [job], result),
     apply: (job) => log("apply", [job], result),
     openFolder: (path) => log("openFolder", [path], undefined),
+    isPackaged: () => log("isPackaged", [], packaged),
   };
   return { api, calls, stored: () => stored, count: (name: string) => calls.filter((c) => c[0] === name).length };
 }

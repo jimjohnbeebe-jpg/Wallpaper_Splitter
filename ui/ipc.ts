@@ -149,4 +149,6 @@ export const api = {
   exportTiles: (job: ExportJob) => call<ExportResult>("export", { job }),
   apply: (job: ExportJob) => call<ExportResult>("apply", { job }),
   openFolder: (path: string) => call<void>("open_folder", { path }),
+  /** True in the Store (MSIX) build: HKCU writes are virtualised there, so the JPEG import fix is hidden. */
+  isPackaged: () => call<boolean>("is_packaged"),
 };
