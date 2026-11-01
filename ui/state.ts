@@ -1,6 +1,6 @@
 // App state: monitors, the placed calibration, the open image, framing, layout, settings. One store, one
 // emit; pages subscribe and sync. Settings are saved 500 ms after the last change. No DOM in this file.
-import type { api as realApi, ExportJob, Framing, ImageInfo, Layout, MonitorInfo, PlacedMonitor, Prefs, Session, Settings } from "./ipc.ts";
+import type { Align, api as realApi, ExportJob, Framing, ImageInfo, Layout, MonitorInfo, PlacedMonitor, Prefs, Session, Settings } from "./ipc.ts";
 import { clampZoom } from "./geom.ts";
 
 export type Api = typeof realApi;
@@ -138,6 +138,14 @@ export function createApp(api: Api, saveDelay = 500) {
       } catch (e) { fail(e); }
     },
 
+    /** Ctrl+O: the system file picker, then open. */
+    async pick(): Promise<void> {
+      try {
+        const path = await api.pickImage();
+        if (path) await app.open(path);
+      } catch (e) { fail(e); }
+    },
+
     setFraming(patch: Partial<Framing>): void {
       st.framing = { ...st.framing, ...patch };
       st.framing.zoom = clampZoom(st.framing.zoom);
@@ -192,6 +200,21 @@ export function createApp(api: Api, saveDelay = 500) {
       }
       st.busy = null;
       emit();
+    },
+
+    openFolder(path: string): void { api.openFolder(path).catch(fail); },
+    identify(): void { api.identify().catch(fail); },
+
+    /** Arranges the monitors again from Windows' order. keepSizes passes the current mm sizes in as if the
+     *  monitors had reported them, so hand-set sizes and nudges survive an alignment change. */
+    async arrange(align: Align, bezelMm: number, keepSizes: boolean): Promise<void> {
+      try {
+        const mons = keepSizes
+          ? st.monitors.map((m) => { const p = st.placed.find((x) => x.id === m.id); return p ? { ...m, edidMm: { w: p.mm.w, h: p.mm.h } } : m; })
+          : st.monitors;
+        const placed = await api.defaultPlacement(mons, align, bezelMm);
+        app.setPlaced(keepSizes ? placed.map((p) => ({ ...p, nudgePx: st.placed.find((x) => x.id === p.id)?.nudgePx ?? p.nudgePx })) : placed);
+      } catch (e) { fail(e); }
     },
 
     async setHdr(id: string, on: boolean): Promise<void> {
