@@ -144,3 +144,12 @@ test("a slow open that finishes after a newer one is ignored", async () => {
   expect(app.state.image?.path).toBe("C:\p\small.jpg");
   expect(app.state.settings.last?.image).toBe("C:\p\small.jpg");
 });
+
+test("start learns whether this is the Store (packaged) build", async () => {
+  const portable = createApp(mockApi().api);
+  await portable.start();
+  expect(portable.state.packaged).toBe(false);
+  const store = createApp(mockApi(undefined, true).api);
+  await store.start();
+  expect(store.state.packaged).toBe(true);
+});

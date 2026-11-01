@@ -17,6 +17,7 @@ export type AppState = {
   result: Result | null;
   busy: Busy;
   selected: number; // selected pane index, -1 for none
+  packaged: boolean; // the Store (MSIX) build
 };
 
 export const defaultFraming = (): Framing => ({ fit: "cover", zoom: 1, offsetMm: { x: 0, y: 0 } });
@@ -62,7 +63,7 @@ const raf: (f: () => void) => void = (f) =>
 export function createApp(api: Api, saveDelay = 500) {
   const st: AppState = {
     monitors: [], placed: [], image: null, framing: defaultFraming(), layout: null,
-    settings: defaultSettings(), result: null, busy: null, selected: -1,
+    settings: defaultSettings(), result: null, busy: null, selected: -1, packaged: false,
   };
   const subs = new Set<() => void>();
   const emit = (): void => subs.forEach((f) => f());
@@ -118,6 +119,7 @@ export function createApp(api: Api, saveDelay = 500) {
 
     async start(): Promise<void> {
       try { st.settings = { ...defaultSettings(), ...(await api.getSettings()) }; } catch (e) { fail(e); }
+      try { st.packaged = await api.isPackaged(); } catch { /* not inside Tauri: portable */ }
       try { await app.refreshMonitors(); } catch (e) { fail(e); }
       const last = st.settings.last;
       if (st.settings.prefs.reopenLast && last) await app.open(last.image, last.framing);

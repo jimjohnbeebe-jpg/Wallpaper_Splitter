@@ -1,4 +1,4 @@
-# A v* tag builds the portable exe and attaches it, with SHA256SUMS.txt, to a draft GitHub release
+# A v* tag builds the portable exe (and the Store MSIX) and attaches them, with SHA256SUMS.txt, to a draft GitHub release
 # (a pre-release when the tag has a suffix, v1.0.0-rc.1); Jim publishes the draft. A PR that touches
 # this file or the Tauri config builds the same exe without releasing it.
 name: release
@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/release.yml
+      - packaging/**
       - src-tauri/tauri.conf.json
       - src-tauri/Cargo.toml
   workflow_dispatch:
@@ -52,7 +53,22 @@ jobs:
         run: |
           mkdir -p release
           cp src-tauri/target/release/WallpaperSplitter.exe "release/WallpaperSplitter-$VERSION.exe"
-          cd release && sha256sum WallpaperSplitter-*.exe > SHA256SUMS.txt && cat SHA256SUMS.txt
+      # The Store package, once the Partner Center identity is saved as repository variables.
+      - name: Store package (MSIX)
+        if: vars.MSIX_IDENTITY_NAME != ''
+        shell: pwsh
+        env:
+          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          $out = "$env:RUNNER_TEMP/WallpaperSplitter-$env:VERSION"
+          ./packaging/msix/stage.ps1 -Exe src-tauri/target/release/WallpaperSplitter.exe -Version $env:VERSION `
+            -IdentityName $env:MSIX_IDENTITY_NAME -Publisher $env:MSIX_PUBLISHER `
+            -PublisherDisplayName $env:MSIX_PUBLISHER_DISPLAY_NAME -Out $out
+          Move-Item "$out.msix" release/
+      - name: Checksums
+        run: cd release && sha256sum WallpaperSplitter-* > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: exe
@@ -65,5 +81,5 @@ jobs:
         run: |
           pre=""
           case "$GITHUB_REF_NAME" in *-*) pre="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" release/WallpaperSplitter-*.exe release/SHA256SUMS.txt \
+          gh release create "$GITHUB_REF_NAME" release/WallpaperSplitter-* release/SHA256SUMS.txt \
             --draft $pre --verify-tag --title "Wallpaper Splitter $GITHUB_REF_NAME" --generate-notes

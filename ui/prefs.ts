@@ -63,7 +63,8 @@ export function prefsPage(app: App): Page {
     add(folder), add(template), add(exampleField),
     add(switchField("Also export one spanning image", "One file across all monitors, beside the per-monitor files", () => p().span, (v) => set({ span: v }))),
     add(fill),
-    add(switchField("JPEG import fix", "Stop Windows recompressing JPG wallpapers (sets JPEGImportQuality to 100)", () => p().jpegImportFix, (v) => set({ jpegImportFix: v }))));
+    // The Store build cannot write the real HKCU (MSIX virtualises it), so the fix would do nothing there.
+    st.packaged ? null : add(switchField("JPEG import fix", "Stop Windows recompressing JPG wallpapers (sets JPEGImportQuality to 100)", () => p().jpegImportFix, (v) => set({ jpegImportFix: v }))));
 
   const startup = h("section", { class: "group" }, h("h2", {}, "Startup"),
     add(switchField("Reopen the last image", "Starts where you left off, with the same framing", () => p().reopenLast, (v) => set({ reopenLast: v }))));

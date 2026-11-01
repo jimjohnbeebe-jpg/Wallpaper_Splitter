@@ -137,6 +137,16 @@ fn set_position(p: windows::Win32::UI::Shell::DESKTOP_WALLPAPER_POSITION) -> Res
     unsafe { com.wallpaper()?.SetPosition(p) }.map_err(|e| e.to_string())
 }
 
+/// Whether the app runs from an MSIX package (the Store build). There HKCU writes go to a private
+/// per-package hive, so the JPEG import fix would change nothing Windows reads.
+pub fn packaged() -> bool {
+    use windows::Win32::Foundation::APPMODEL_ERROR_NO_PACKAGE;
+    use windows::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName;
+    let mut len = 0u32;
+    let r = unsafe { GetCurrentPackageFullName(&mut len, None) };
+    r != APPMODEL_ERROR_NO_PACKAGE
+}
+
 /// HKCU\Control Panel\Desktop\JPEGImportQuality = 100, so Windows keeps JPG wallpapers at full quality.
 pub fn set_jpeg_import_quality_100() -> Result<(), String> {
     let value = 100u32;
@@ -165,6 +175,11 @@ mod tests {
             w: 3840.0,
             h: 2160.0,
         }
+    }
+
+    #[test]
+    fn not_packaged_under_cargo_test() {
+        assert!(!packaged());
     }
 
     #[test]

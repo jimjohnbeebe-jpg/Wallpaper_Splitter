@@ -1,6 +1,6 @@
 {
   "name": "wallpaper-splitter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Split one image into per-monitor wallpapers that line up across monitors of any size, resolution and pixel density.",
   "type": "module",
