@@ -1,6 +1,6 @@
 [package]
 name = "wallpaper-splitter"
-version = "0.1.0"
+version = "1.0.0"
 description = "Split one image into per-monitor wallpapers that line up across monitors of any size."
 edition = "2021"
 license = "MIT"
