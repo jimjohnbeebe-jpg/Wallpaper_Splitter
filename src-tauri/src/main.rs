@@ -10,7 +10,8 @@
 //   wallpaper  IDesktopWallpaper, JPEGImportQuality
 //   hdr        DisplayConfig HDR state per monitor
 //   settings   %APPDATA%\WallpaperSplitter\settings.json, atomic writes
-//   preview    the per-monitor full-screen and identify windows
+//   preview    the open full-screen preview and identify state (Tauri managed state)
+//   preview_win  the per-monitor borderless windows and the HDR switch around the preview
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod color;
@@ -23,6 +24,7 @@ mod hdr;
 mod model;
 mod monitors;
 mod preview;
+mod preview_win;
 mod settings;
 mod wallpaper;
 
