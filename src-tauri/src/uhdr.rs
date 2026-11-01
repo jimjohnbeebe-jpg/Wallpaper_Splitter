@@ -1,7 +1,6 @@
 // uhdr: Ultra HDR (gain-map) JPEG. Decode = base JPEG + gain map JPEG (zune-jpeg) through ultrahdr-rs's
 // apply_gainmap; encode (for HDR preview proxies) = image's JpegEncoder + encode_ultrahdr. Built without
 // ultrahdr-rs's AGPL zencodec feature, so its own Decoder::decode_hdr is not available (spike notes).
-#![allow(dead_code)]
 use crate::color::{Gamut, Rgb};
 use half::f16;
 use image::codecs::jpeg::JpegEncoder;

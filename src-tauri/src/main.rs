@@ -56,6 +56,12 @@ fn main() {
             commands::apply,
             commands::open_folder,
         ])
-        .run(tauri::generate_context!())
-        .expect("Wallpaper Splitter failed to start");
+        .build(tauri::generate_context!())
+        .expect("Wallpaper Splitter failed to start")
+        .run(|app, event| {
+            // HDR the preview switched on goes back off however the app ends.
+            if let tauri::RunEvent::Exit = event {
+                preview::restore_hdr(app);
+            }
+        });
 }

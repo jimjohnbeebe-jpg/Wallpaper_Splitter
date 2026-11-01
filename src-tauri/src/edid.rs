@@ -1,5 +1,4 @@
 // edid: the monitor name and physical size from a raw EDID base block (VESA E-EDID 1.4). Pure.
-#![allow(dead_code)] // called from commands.rs once the pass-1 branches are merged
 use crate::model::Size;
 
 const HEADER: [u8; 8] = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];

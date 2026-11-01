@@ -131,6 +131,10 @@ fn names_are_sanitised_and_deduplicated() {
         file_name("{monitor}", "pic", " a<b>:c\"d/e\\f|g?h*i ", 1, 1, 1, "jpg"),
         "abcdefghi.jpg"
     );
+    assert_eq!(
+        file_name("{image}", "My pic 6000 x 4000", "x", 1, 1, 1, "png"),
+        "My-pic-6000-x-4000.png"
+    );
     assert_eq!(file_name("{index}. ", "pic", "x", 2, 1, 1, "png"), "2.png");
     assert_eq!(
         file_name("???", "pic", "x", 2, 1, 1, "png"),

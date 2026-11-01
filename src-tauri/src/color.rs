@@ -1,6 +1,5 @@
 // color: transfer functions, gamut matrices and the SDR tone map. Linear values use 1.0 = SDR white
 // unless a function says otherwise (PQ and HLG work in nits).
-#![allow(dead_code)]
 
 pub type Rgb = [f32; 3];
 pub type Mat3 = [[f32; 3]; 3];
@@ -56,6 +55,7 @@ pub fn pq_eotf(e: f32) -> f32 {
 }
 
 /// SMPTE ST 2084 inverse: nits -> signal 0..1.
+#[cfg(test)] // the decoders only go signal -> light
 pub fn pq_inverse_eotf(nits: f32) -> f32 {
     let y = (nits / 10000.0).max(0.0).powf(PQ_M1);
     ((PQ_C1 + PQ_C2 * y) / (1.0 + PQ_C3 * y)).powf(PQ_M2)
@@ -75,6 +75,7 @@ pub fn hlg_inverse_oetf(e: f32) -> f32 {
 }
 
 /// HLG signal (BT.2020 primaries) -> display nits through the BT.2100 OOTF for a 1000-nit display.
+#[cfg(test)]
 pub fn hlg_to_nits(signal: Rgb) -> Rgb {
     hlg_ootf(signal.map(hlg_inverse_oetf))
 }

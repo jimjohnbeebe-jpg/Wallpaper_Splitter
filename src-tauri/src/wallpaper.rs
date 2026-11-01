@@ -1,15 +1,12 @@
 // wallpaper: sets per-monitor or spanning wallpaper through IDesktopWallpaper, and the JPEGImportQuality
 // registry value that stops Windows recompressing JPG wallpapers. Monitor IDs are the device-interface
 // paths monitors.rs reports; when an ID does not match (rare), the monitor's pixel rectangle does.
-#![allow(dead_code)] // called from commands.rs once the pass-1 branches are merged
 use crate::model::Rect;
 use windows::core::{HSTRING, PCWSTR, PWSTR};
 use windows::Win32::Foundation::RPC_E_CHANGED_MODE;
 use windows::Win32::System::Com::*;
 use windows::Win32::System::Registry::{RegSetKeyValueW, HKEY_CURRENT_USER, REG_DWORD};
-use windows::Win32::UI::Shell::{
-    DesktopWallpaper, IDesktopWallpaper, DESKTOP_WALLPAPER_POSITION, DWPOS_FILL, DWPOS_SPAN,
-};
+use windows::Win32::UI::Shell::{DesktopWallpaper, IDesktopWallpaper, DWPOS_FILL, DWPOS_SPAN};
 
 /// COM, apartment-threaded on this thread for as long as the guard lives.
 struct Com(bool);
@@ -113,6 +110,7 @@ pub fn set_span(path: &str) -> Result<(), String> {
 }
 
 /// (monitor id, wallpaper file) for every attached monitor; the file is "" for a solid colour.
+#[cfg(test)] // the hardware test reads the old state and puts it back
 pub fn get_current() -> Vec<(String, String)> {
     let Ok(com) = Com::init() else { return vec![] };
     let Ok(dw) = com.wallpaper() else {
@@ -127,12 +125,14 @@ pub fn get_current() -> Vec<(String, String)> {
         .collect()
 }
 
-fn position() -> Option<DESKTOP_WALLPAPER_POSITION> {
+#[cfg(test)]
+fn position() -> Option<windows::Win32::UI::Shell::DESKTOP_WALLPAPER_POSITION> {
     let com = Com::init().ok()?;
     unsafe { com.wallpaper().ok()?.GetPosition() }.ok()
 }
 
-fn set_position(p: DESKTOP_WALLPAPER_POSITION) -> Result<(), String> {
+#[cfg(test)]
+fn set_position(p: windows::Win32::UI::Shell::DESKTOP_WALLPAPER_POSITION) -> Result<(), String> {
     let com = Com::init()?;
     unsafe { com.wallpaper()?.SetPosition(p) }.map_err(|e| e.to_string())
 }

@@ -1,7 +1,6 @@
 // preview_win: the borderless per-monitor windows behind preview.rs (full-screen preview and identify),
 // placed in physical pixels so mixed-DPI desks line up, plus the HDR switching around the preview.
 // Everything here runs on helper threads: building a webview from a synchronous command deadlocks.
-#![allow(dead_code)] // called from commands.rs once the pass-1 branches are merged
 use crate::model::Rect;
 use crate::{hdr, preview};
 use std::time::Duration;

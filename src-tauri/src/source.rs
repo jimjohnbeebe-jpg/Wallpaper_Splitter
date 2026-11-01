@@ -1,7 +1,6 @@
 // source: a decoded image kept compact (u8/u16/f16 RGB) plus its colour encoding, and rendering one crop
 // of it to linear BT.709 f32 (1.0 = SDR white) at an exact output size. Only the visible part of a crop
 // (plus the Lanczos margin) is ever converted to f32, so memory stays near the size of the source.
-#![allow(dead_code)]
 use crate::color::{self, Gamut, Mat3, Rgb, Transfer};
 use crate::model::Rect;
 use fast_image_resize::images::{TypedImage, TypedImageRef};

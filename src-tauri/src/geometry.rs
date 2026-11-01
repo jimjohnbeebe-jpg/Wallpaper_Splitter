@@ -1,6 +1,5 @@
 // geometry: desk millimetres -> per-monitor crop rectangles, default placement, span canvas.
 // The ONLY layout maths in the app (CLAUDE.md).
-#![allow(dead_code)]
 use crate::model::*;
 
 /// Fallback pixel pitch when no monitor reports a physical size.

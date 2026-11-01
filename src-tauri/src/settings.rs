@@ -1,7 +1,6 @@
 // settings: %APPDATA%\WallpaperSplitter\settings.json, written to a temporary name and renamed so a reader
 // never sees half a file (pattern: LrC-AVG hud/src-tauri/src/store.rs). A missing file reads as the
 // defaults; a corrupt one also reads as the defaults and is kept beside it as settings.json.bad.
-#![allow(dead_code)] // called from commands.rs once the pass-1 branches are merged
 use crate::model::Settings;
 use std::path::{Path, PathBuf};
 

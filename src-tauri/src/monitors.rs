@@ -2,7 +2,6 @@
 // device-interface path (EnumDisplayDevicesW, also IDesktopWallpaper's monitor ID) and its EDID from
 // SetupAPI, matched on that path. Pattern: LrC-AVG hud/src-tauri/src/monitors.rs.
 // Coordinates are physical pixels because Tauri (tao 0.37) makes the process Per-Monitor-DPI-aware v2.
-#![allow(dead_code)] // called from commands.rs once the pass-1 branches are merged
 use crate::model::{MonitorInfo, Rect};
 use crate::{edid, hdr};
 use std::mem::size_of;

@@ -105,7 +105,6 @@ pub struct Tile {
 /// (monitor.px.x - origin_x, monitor.px.y - origin_y). Built by geometry::span_canvas, used by export.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)] // used by geometry::span_canvas and export (pass 1)
 pub struct Span {
     pub w: u32,
     pub h: u32,

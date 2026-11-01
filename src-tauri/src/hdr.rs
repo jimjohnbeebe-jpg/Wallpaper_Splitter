@@ -1,7 +1,6 @@
 // hdr: per-monitor HDR state and SDR white level through DisplayConfig (ported from spike S4, proven on
 // Windows 11 26H2). No admin rights needed. Callers that switch HDR read the old state first and put it
 // back (preview.rs does).
-#![allow(dead_code)] // called from commands.rs once the pass-1 branches are merged
 use crate::model::HdrState;
 use std::mem::size_of;
 use windows::Win32::Devices::Display::*;

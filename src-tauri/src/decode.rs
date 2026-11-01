@@ -1,6 +1,5 @@
 // decode: every source format -> ImageInfo, a WebView2-readable preview, and a Source for export.
 // Formats are recognised by content, never by extension.
-#![allow(dead_code)]
 use crate::color::{Gamut, Transfer, REF_WHITE_NITS};
 use crate::model::{ImageInfo, Rect};
 use crate::source::{self, Pixels, Source};

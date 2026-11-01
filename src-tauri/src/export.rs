@@ -1,5 +1,4 @@
 // export: render each monitor's tile, write PNG/JPG/JXR named from the template, optional span image.
-#![allow(dead_code)]
 use crate::color::{self, Rgb};
 use crate::model::{ExportFormat, ExportJob, ExportResult, ExportedFile, MonitorInfo};
 use crate::{decode, geometry, source, wic};
@@ -102,13 +101,15 @@ pub fn file_name(
     h: u32,
     ext: &str,
 ) -> String {
-    let monitor = sanitize(&monitor.split_whitespace().collect::<Vec<_>>().join("-"));
+    // Spaces become hyphens in both names, as the UI's example shows (ui/state.ts renderTemplate).
+    let dash = |s: &str| sanitize(&s.split_whitespace().collect::<Vec<_>>().join("-"));
+    let (monitor, image) = (dash(monitor), dash(image));
     let name = template
         .replace("{monitor}", &monitor)
         .replace("{index}", &index.to_string())
         .replace("{w}", &w.to_string())
         .replace("{h}", &h.to_string())
-        .replace("{image}", image);
+        .replace("{image}", &image);
     let name = sanitize(&name);
     let name = if name.is_empty() {
         "wallpaper".into()

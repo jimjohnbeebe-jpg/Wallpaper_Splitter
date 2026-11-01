@@ -1,6 +1,5 @@
 // preview: the open full-screen preview (job, tiles, selection, grid, HDR we switched on) and the identify
 // labels, as Tauri managed state. The pure part lives here; the windows themselves are in preview_win.rs.
-#![allow(dead_code)] // called from commands.rs once the pass-1 branches are merged
 use crate::model::*;
 use crate::preview_win as win;
 use std::sync::{Mutex, MutexGuard};

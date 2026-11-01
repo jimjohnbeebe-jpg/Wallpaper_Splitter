@@ -1,7 +1,6 @@
 // wic: Windows Imaging Component. Decodes AVIF (needs the Store's AV1 Video Extension and HEIF Image
 // Extensions) and writes scRGB fp16 JPEG XR. Proven by spikes S2 and S3: WIC hands HDR AVIF back as
 // 64bppRGBAHalf scRGB (linear BT.709, 1.0 = 80 nits), so never convert HDR through a u16 format (it clips).
-#![allow(dead_code)]
 use crate::source::Pixels;
 use half::f16;
 use windows::core::{GUID, HSTRING, PWSTR};

@@ -30,7 +30,7 @@ function emptyState(app: App) {
       keys("Ctrl", "O")),
     h("p", { class: "caption drop-hint" }, "Or drop an image file anywhere in this window."),
     recent);
-  let key = "";
+  let key: string | null = null; // null: never synced, so an empty list still hides the heading
   const sync = (): void => {
     el.hidden = app.state.image !== null;
     const r = app.state.settings.recent;
