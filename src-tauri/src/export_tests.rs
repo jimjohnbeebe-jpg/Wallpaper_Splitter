@@ -142,3 +142,22 @@ fn names_are_sanitised_and_deduplicated() {
     assert_eq!(parse_fill("#ffffff"), [1.0; 3]);
     assert_eq!(parse_fill("nope"), [0.0; 3]);
 }
+
+#[test]
+fn never_overwrites_the_source_photo() {
+    let dir = temp_dir("export-self");
+    let src = dir.join("sdr8.png");
+    std::fs::copy(fixture("sdr8.png"), &src).unwrap();
+    let (mut job, mons) = job("sdr8.png", &dir, ExportFormat::Png, false);
+    job.image = src.to_string_lossy().into_owned();
+    job.prefs.template = "{image}".into();
+    let res = export(&job, &mons, 203.0).unwrap();
+    let names: Vec<_> = res
+        .files
+        .iter()
+        .map(|f| f.path.rsplit('\\').next().unwrap().to_string())
+        .collect();
+    assert_eq!(names, ["sdr8-1.png", "sdr8-2.png"]);
+    assert_eq!(image::image_dimensions(&src).unwrap(), (128, 64));
+    let _ = std::fs::remove_dir_all(&dir);
+}

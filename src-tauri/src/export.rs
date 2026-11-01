@@ -196,6 +196,32 @@ impl Canvas {
     }
 }
 
+/// `folder`, or Pictures\Wallpaper Splitter\<image stem>, created. Also returns the file names already
+/// taken: the source photo's own, when it lives in that folder, so an export never overwrites it.
+fn output_folder(
+    folder: &str,
+    image: &Path,
+    stem: &str,
+) -> Result<(PathBuf, HashSet<String>), String> {
+    let folder = if folder.trim().is_empty() {
+        pictures_folder()?
+            .join("Wallpaper Splitter")
+            .join(sanitize(stem))
+    } else {
+        PathBuf::from(folder.trim())
+    };
+    std::fs::create_dir_all(&folder)
+        .map_err(|e| format!("Could not create the folder {}: {e}", folder.display()))?;
+    let canon = |p: &Path| p.canonicalize().ok();
+    let mut used = HashSet::new();
+    if image.parent().and_then(canon).is_some() && image.parent().and_then(canon) == canon(&folder)
+    {
+        let name = image.file_name().unwrap_or_default().to_string_lossy();
+        used.insert(name.to_lowercase());
+    }
+    Ok((folder, used))
+}
+
 /// Writes one file per monitor (and the span image when asked). `sdr_white_nits` scales HDR output.
 pub fn export(
     job: &ExportJob,
@@ -219,36 +245,12 @@ pub fn export(
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let folder = if prefs.folder.trim().is_empty() {
-        pictures_folder()?
-            .join("Wallpaper Splitter")
-            .join(sanitize(&stem))
-    } else {
-        PathBuf::from(prefs.folder.trim())
-    };
-    std::fs::create_dir_all(&folder)
-        .map_err(|e| format!("Could not create the folder {}: {e}", folder.display()))?;
+    let (folder, mut used) = output_folder(&prefs.folder, image_path, &stem)?;
     let ext = match prefs.format {
         ExportFormat::Png => "png",
         ExportFormat::Jpg { .. } => "jpg",
         ExportFormat::Jxr => "jxr",
     };
-    let mut used = HashSet::new();
-    let same_dir = |a: &Path, b: &Path| {
-        a.canonicalize()
-            .ok()
-            .zip(b.canonicalize().ok())
-            .is_some_and(|(a, b)| a == b)
-    };
-    if image_path.parent().is_some_and(|p| same_dir(p, &folder)) {
-        used.insert(
-            image_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_lowercase(),
-        );
-    }
     let fill = parse_fill(&prefs.fill);
     let enc = |rgb: &[Rgb]| encode(rgb, jxr, src.headroom, sdr_white_nits);
     let mut canvas = prefs
