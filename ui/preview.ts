@@ -18,11 +18,14 @@ export function gridLines(startMm: number, sizeMm: number, pxPerMm: number, step
   return out;
 }
 
+/** How far (CSS px) a nudge moves the picture on screen. geometry.rs adds the nudge to the crop origin,
+ *  so a positive nudge moves the picture left/up; the grid moves with the picture. */
+export const nudgeShift = (n: { x: number; y: number }, dpr: number): [number, number] => [-n.x / dpr, -n.y / dpr];
+
 function drawGrid(s: Preview, w: number, hgt: number, dpr: number): SVGSVGElement {
   const m = s.monitor;
   const k = w / m.mm.w; // CSS px per mm
-  // ponytail: assumes a positive nudge moves the picture right/down; the grid moves with the picture.
-  const [nx, ny] = [m.nudgePx.x / dpr, m.nudgePx.y / dpr];
+  const [nx, ny] = nudgeShift(m.nudgePx, dpr);
   const g = svg("svg", { class: "grid", width: w, height: hgt, "aria-hidden": "true" });
   for (const step of [10, 100]) {
     const cls = step === 100 ? "g100" : "g10";

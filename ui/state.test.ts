@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { benq, mockApi, samsung } from "./mock.ts";
-import { calibrationKey, createApp, renderTemplate, updateRecent } from "./state.ts";
+import { calibrationKey, createApp, renderTemplate, updateRecent, withPx } from "./state.ts";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -90,4 +90,28 @@ test("results are said in words; JXR falls back to PNG for an SDR image", async 
   m.api.exportTiles = () => Promise.reject("The folder is read-only.");
   await app.run("export");
   expect(app.state.result).toEqual({ kind: "error", text: "The folder is read-only." });
+});
+
+test("HDR images export as JPEG XR while hdrOutput is on, in the chosen format when it is off", async () => {
+  const m = mockApi();
+  m.api.openImage = (path) => Promise.resolve({ path, previewPath: path, width: 6000, height: 2000, format: "jpeg", hdr: true });
+  const app = createApp(m.api);
+  await app.start();
+  await app.open("C:\\p\\uhdr.jpg");
+  expect(app.job()?.prefs.format.kind).toBe("jxr");
+  app.setPrefs({ hdrOutput: false });
+  expect(app.job()?.prefs.format.kind).toBe("png");
+});
+
+test("pixel sizes follow the monitors, and the mm size turns with a rotated monitor", async () => {
+  const p = { id: "a", pxW: 3840, pxH: 2160, mm: { x: 1, y: 2, w: 632, h: 360 }, nudgePx: { x: 0, y: 0 } };
+  expect(withPx(p, 2160, 3840).mm).toEqual({ x: 1, y: 2, w: 360, h: 632 });
+  expect(withPx(p, 2560, 1440)).toEqual({ ...p, pxW: 2560, pxH: 1440 });
+  const m = mockApi();
+  const app = createApp(m.api);
+  await app.start();
+  const listed = m.api.listMonitors;
+  m.api.listMonitors = () => listed().then((ms) => ms.map((x) => (x.id === benq.id ? { ...x, px: { ...x.px, w: 2560, h: 1440 } } : x)));
+  await app.refreshMonitors(); // same monitors, new resolution
+  expect(app.state.placed.find((x) => x.id === benq.id)).toMatchObject({ pxW: 2560, pxH: 1440 });
 });

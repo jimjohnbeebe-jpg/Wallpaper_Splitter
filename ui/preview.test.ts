@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { gridLines } from "./preview.ts";
+import { gridLines, nudgeShift } from "./preview.ts";
 
 test("grid lines sit on desk millimetres, so they continue across monitors", () => {
   // A monitor from x = 695 mm, 30 mm wide, 2 px per mm: lines at 700, 710, 720 mm.
@@ -12,4 +12,9 @@ test("grid lines sit on desk millimetres, so they continue across monitors", () 
 test("the grid moves with the nudge", () => {
   expect(gridLines(695, 30, 2, 10, 4)).toEqual([14, 34, 54]);
   expect(gridLines(700, 30, 2, 10, -4)).toEqual([16, 36, 56]);
+});
+
+test("a positive nudge moves the picture, and so the grid, left and up", () => {
+  // geometry.rs adds nudge * src_per_out to crop.x; the picture sits at -crop.x * (outW / dpr / crop.w).
+  expect(nudgeShift({ x: 5, y: -3 }, 1.5)).toEqual([-5 / 1.5, 3 / 1.5]);
 });

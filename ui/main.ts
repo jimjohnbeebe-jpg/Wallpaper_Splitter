@@ -78,6 +78,7 @@ function init(): void {
     }));
     safe(listen<PlacedMonitor[]>("preview-changed", (placed) => app.setPlaced(placed)));
     safe(listen<null>("preview-closed", () => safe(app.refreshMonitors()))); // the preview may have switched HDR
+    window.addEventListener("focus", () => safe(app.refreshMonitors())); // resolution or rotation changed in Settings
   } catch { /* not inside Tauri */ }
 
   show("split");

@@ -48,6 +48,13 @@ export function renderTemplate(template: string, v: { image: string; monitor: st
 }
 export const extFor = (p: Prefs): string => p.format.kind;
 
+/** `p` with the monitor's current pixel size; the mm size turns with it when the monitor was rotated
+ *  (the same rule as geometry::physical_mm for EDID sizes). */
+export function withPx(p: PlacedMonitor, w: number, h: number): PlacedMonitor {
+  const turned = (p.mm.w > p.mm.h) !== (w > h) && p.mm.w !== p.mm.h && w !== h;
+  return { ...p, pxW: w, pxH: h, mm: turned ? { ...p.mm, w: p.mm.h, h: p.mm.w } : p.mm };
+}
+
 const raf: (f: () => void) => void = (f) =>
   typeof requestAnimationFrame === "function" ? void requestAnimationFrame(() => f()) : void setTimeout(f, 16);
 
@@ -105,21 +112,22 @@ export function createApp(api: Api, saveDelay = 500) {
       emit();
     },
 
-    /** Reads the monitors again; on a new set of monitors, loads its calibration (or the default one). */
+    /** Reads the monitors again; on a new set of monitors, loads its calibration (or the default one).
+     *  Pixel sizes always follow the monitors, so a resolution or orientation change is picked up. */
     async refreshMonitors(): Promise<void> {
       const mons = await api.listMonitors();
       const key = calibrationKey(mons.map((m) => m.id));
       const known = calibrationKey(st.monitors.map((m) => m.id));
       st.monitors = mons;
+      const byId = new Map(mons.map((m) => [m.id, m]));
+      const fit = (p: PlacedMonitor): PlacedMonitor => { const m = byId.get(p.id); return m ? withPx(p, m.px.w, m.px.h) : p; };
+      const before = JSON.stringify(st.placed);
       if (key !== known || st.placed.length === 0) {
         const saved = st.settings.calibrations[key];
-        const byId = new Map(mons.map((m) => [m.id, m]));
-        st.placed = saved && saved.every((p) => byId.has(p.id))
-          ? saved.map((p) => { const m = byId.get(p.id); return m ? { ...p, pxW: m.px.w, pxH: m.px.h } : p; })
-          : await api.defaultPlacement(mons, "center", 0);
+        st.placed = saved && saved.every((p) => byId.has(p.id)) ? saved.map(fit) : await api.defaultPlacement(mons, "center", 0);
         st.selected = -1;
-        requestLayout();
-      }
+      } else st.placed = st.placed.map(fit);
+      if (JSON.stringify(st.placed) !== before) requestLayout();
       emit();
     },
 
@@ -174,11 +182,12 @@ export function createApp(api: Api, saveDelay = 500) {
     },
     setSelected(i: number): void { st.selected = i; emit(); },
 
-    /** The export job; HDR JPEG XR falls back to PNG for an SDR image. */
+    /** The export job. An HDR image exports as JPEG XR when hdrOutput is on; JPEG XR falls back to PNG for an SDR image. */
     job(): ExportJob | null {
       if (!st.image) return null;
       const prefs = st.settings.prefs;
-      const format = prefs.format.kind === "jxr" && !st.image.hdr ? { kind: "png" as const } : prefs.format;
+      const hdr = st.image.hdr;
+      const format = hdr && prefs.hdrOutput ? { kind: "jxr" as const } : prefs.format.kind === "jxr" && !hdr ? { kind: "png" as const } : prefs.format;
       return { image: st.image.path, monitors: st.placed, framing: st.framing, prefs: { ...prefs, format } };
     },
 
