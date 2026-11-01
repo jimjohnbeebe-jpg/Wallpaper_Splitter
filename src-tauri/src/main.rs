@@ -3,6 +3,7 @@
 //   commands   the Tauri commands, thin wrappers over the modules below
 //   geometry   desk millimetres -> per-monitor crop rectangles and the span canvas (the only layout maths)
 //   monitors   connected monitors, EDID physical size, ids
+//   edid       EDID parsing: monitor name and size in mm (pure)
 //   decode     every source format -> linear BT.709 f32 (+ SDR rendition)
 //   color      transfer functions, gamut matrices, tone mapping
 //   export     resize, PNG/JPG/JXR writing, file naming
@@ -15,6 +16,7 @@
 mod color;
 mod commands;
 mod decode;
+mod edid;
 mod export;
 mod geometry;
 mod hdr;
