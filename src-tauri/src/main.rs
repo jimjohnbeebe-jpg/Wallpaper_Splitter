@@ -3,6 +3,7 @@
 //   commands   the Tauri commands, thin wrappers over the modules below
 //   geometry   desk millimetres -> per-monitor crop rectangles and the span canvas (the only layout maths)
 //   monitors   connected monitors, EDID physical size, ids
+//   edid       EDID parsing: monitor name and size in mm (pure)
 //   decode     sniffing, ImageInfo, preview proxies, loading every source format into a Source
 //   uhdr       Ultra HDR gain-map JPEG decode (ISO 21496-1 first) and encode (preview proxies)
 //   wic        Windows Imaging Component: AVIF decode, scRGB JPEG XR encode
@@ -12,18 +13,21 @@
 //   wallpaper  IDesktopWallpaper, JPEGImportQuality
 //   hdr        DisplayConfig HDR state per monitor
 //   settings   %APPDATA%\WallpaperSplitter\settings.json, atomic writes
-//   preview    the per-monitor full-screen and identify windows
+//   preview    the open full-screen preview and identify state (Tauri managed state)
+//   preview_win  the per-monitor borderless windows and the HDR switch around the preview
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod color;
 mod commands;
 mod decode;
+mod edid;
 mod export;
 mod geometry;
 mod hdr;
 mod model;
 mod monitors;
 mod preview;
+mod preview_win;
 mod settings;
 mod source;
 mod uhdr;
