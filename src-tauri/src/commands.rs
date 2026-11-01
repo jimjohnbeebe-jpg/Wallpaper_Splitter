@@ -35,6 +35,31 @@ pub fn compute_layout(
 }
 
 #[tauri::command]
+pub fn default_placement(
+    monitors: Vec<MonitorInfo>,
+    align: Align,
+    bezel_mm: f64,
+) -> Res<Vec<PlacedMonitor>> {
+    let _ = (monitors, align, bezel_mm);
+    todo("Default placement")
+}
+
+#[tauri::command]
+pub fn preview_state(_app: tauri::AppHandle, _label: String) -> Res<PreviewState> {
+    todo("The full-screen preview")
+}
+
+#[tauri::command]
+pub fn preview_nudge(_app: tauri::AppHandle, _dx: f64, _dy: f64, _next: bool) -> Res<()> {
+    todo("The full-screen preview")
+}
+
+#[tauri::command]
+pub fn preview_grid(_app: tauri::AppHandle) -> Res<()> {
+    todo("The full-screen preview")
+}
+
+#[tauri::command]
 pub fn get_settings() -> Res<Settings> {
     Ok(Settings::default())
 }

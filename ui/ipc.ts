@@ -45,7 +45,23 @@ export type Tile = {
   outH: number;
   upscale: number; // outW / crop.w; above 1 means the source is enlarged
 };
-export type Layout = { tiles: Tile[]; span: { w: number; h: number; originX: number; originY: number } };
+export type Layout = { tiles: Tile[] };
+export type Align = "top" | "center" | "bottom";
+
+/** What a secondary window (label preview-<i> or identify-<i>, page preview.html) shows. */
+export type PreviewState =
+  | {
+      kind: "preview";
+      previewPath: string;
+      imageW: number;
+      imageH: number;
+      tile: Tile;
+      monitor: PlacedMonitor;
+      fill: string;
+      grid: boolean;
+      selected: boolean; // Tab cycles the selected monitor; arrow keys nudge it
+    }
+  | { kind: "identify"; number: number; name: string; pxW: number; pxH: number };
 
 export type ExportFormat = { kind: "png" } | { kind: "jpg"; quality: number } | { kind: "jxr" };
 
@@ -76,13 +92,21 @@ export type Settings = {
 export type ExportJob = { image: string; monitors: PlacedMonitor[]; framing: Framing; prefs: Prefs };
 export type ExportResult = { files: { monitorId: string; path: string }[]; spanFile: string | null; folder: string };
 
+/** Events from the backend: "preview-changed" (payload PlacedMonitor[]: the nudged calibration, for the
+ *  main window to keep and save; preview windows refetch their state), "preview-closed" (no payload),
+ *  and Tauri's own drag-drop event on the main window. */
 type Tauri = {
   core: { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>; convertFileSrc: (path: string) => string };
+  event: { listen: <T>(event: string, cb: (e: { payload: T }) => void) => Promise<() => void> };
+  window: { getCurrentWindow: () => { label: string } };
 };
 const tauri = (): Tauri => (globalThis as unknown as { __TAURI__: Tauri }).__TAURI__;
 const call = <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => tauri().core.invoke<T>(cmd, args);
 
 export const fileUrl = (path: string): string => tauri().core.convertFileSrc(path);
+export const listen = <T>(event: string, cb: (payload: T) => void): Promise<() => void> =>
+  tauri().event.listen<T>(event, (e) => cb(e.payload));
+export const windowLabel = (): string => tauri().window.getCurrentWindow().label;
 
 export const api = {
   listMonitors: () => call<MonitorInfo[]>("list_monitors"),
@@ -90,6 +114,12 @@ export const api = {
   pickImage: () => call<string | null>("pick_image"),
   computeLayout: (width: number, height: number, monitors: PlacedMonitor[], framing: Framing) =>
     call<Layout>("compute_layout", { width, height, monitors, framing }),
+  defaultPlacement: (monitors: MonitorInfo[], align: Align, bezelMm: number) =>
+    call<PlacedMonitor[]>("default_placement", { monitors, align, bezelMm }),
+  previewState: (label: string) => call<PreviewState>("preview_state", { label }),
+  /** Nudges the selected monitor (or cycles selection with dx=dy=0 and next=true); emits "preview-changed" with PlacedMonitor[]. */
+  previewNudge: (dx: number, dy: number, next: boolean) => call<void>("preview_nudge", { dx, dy, next }),
+  previewGrid: () => call<void>("preview_grid"),
   getSettings: () => call<Settings>("get_settings"),
   saveSettings: (settings: Settings) => call<void>("save_settings", { settings }),
   setHdr: (monitorId: string, on: boolean) => call<HdrState>("set_hdr", { monitorId, on }),
