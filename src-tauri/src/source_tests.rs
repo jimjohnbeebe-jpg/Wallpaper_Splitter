@@ -30,6 +30,25 @@ fn render_fills_outside_and_resizes_exactly() {
 }
 
 #[test]
+fn image_edges_never_mix_with_the_fill() {
+    // A crop exactly on the image bounds: Lanczos reads past the edges, which must repeat the edge.
+    let src = grey_u8(100, 50, 128);
+    let grey = crate::color::srgb_eotf(128.0 / 255.0);
+    let crop = Rect {
+        x: 0.0,
+        y: 0.0,
+        w: 100.0,
+        h: 50.0,
+    };
+    for (w, h) in [(40, 20), (250, 125)] {
+        let out = render(&src, crop, w, h, [5.0, 0.0, 0.0]).unwrap();
+        for p in out {
+            assert!(p.iter().all(|&v| (v - grey).abs() < 1e-3), "{w}x{h}: {p:?}");
+        }
+    }
+}
+
+#[test]
 fn hdr_sources_linearise_and_measure_headroom() {
     // PQ code for 1000 nits -> 1000/203 SDR whites.
     let code = (crate::color::pq_inverse_eotf(1000.0) * 65535.0).round() as u16;
@@ -40,7 +59,7 @@ fn hdr_sources_linearise_and_measure_headroom() {
         "{}",
         src.headroom
     );
-    let p = src.region(0, 0, 1, 1, [0.0; 3])[0].0;
+    let p = src.region(0, 0, 1, 1, [0.0; 3], [0, 0, 2, 2])[0].0;
     assert!(
         (p[0] - 4.926).abs() < 0.01 && (p[2] - 4.926).abs() < 0.01,
         "{p:?}"

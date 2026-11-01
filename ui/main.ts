@@ -1,7 +1,7 @@
 // The shell: page switching from the sidebar (click, or Up/Down while a nav item has focus), the footer,
 // app-wide keys (Ctrl+O), file drag and drop, and the events from the preview windows.
 import { footer } from "./footer.ts";
-import { api, listen, onDragDrop, type PlacedMonitor } from "./ipc.ts";
+import { api, listen, onCloseRequested, onDragDrop, type PlacedMonitor } from "./ipc.ts";
 import { monitorsPage } from "./monitors.ts";
 import { prefsPage } from "./prefs.ts";
 import { splitPage, type Page } from "./split.ts";
@@ -79,6 +79,7 @@ function init(): void {
     safe(listen<PlacedMonitor[]>("preview-changed", (placed) => app.setPlaced(placed)));
     safe(listen<null>("preview-closed", () => safe(app.refreshMonitors()))); // the preview may have switched HDR
     window.addEventListener("focus", () => safe(app.refreshMonitors())); // resolution or rotation changed in Settings
+    safe(onCloseRequested(() => app.flush())); // a change made in the last 500 ms is not lost
   } catch { /* not inside Tauri */ }
 
   show("split");

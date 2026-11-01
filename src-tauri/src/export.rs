@@ -197,22 +197,52 @@ impl Canvas {
     }
 }
 
-/// `folder`, or Pictures\Wallpaper Splitter\<image stem>, created. Also returns the file names already
-/// taken: the source photo's own, when it lives in that folder, so an export never overwrites it.
+fn create(dir: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(dir)
+        .map_err(|e| format!("Could not create the folder {}: {e}", dir.display()))
+}
+
+/// `root`\<stem>, created; or `root`\<stem> (2), (3)… when that one holds another photo's files. Each
+/// default folder keeps its photo's full path in `.source`, so two photos with the same name never
+/// overwrite each other's wallpapers.
+fn default_folder(root: &Path, stem: &str, image: &Path) -> Result<PathBuf, String> {
+    let me = std::path::absolute(image).unwrap_or_else(|_| image.to_path_buf());
+    let me = me.to_string_lossy();
+    let name = sanitize(stem);
+    let mut n = 1;
+    loop {
+        let dir = match n {
+            1 => root.join(&name),
+            _ => root.join(format!("{name} ({n})")),
+        };
+        n += 1;
+        let marker = dir.join(".source");
+        if let Ok(other) = std::fs::read_to_string(&marker) {
+            if !other.trim().eq_ignore_ascii_case(&me) {
+                continue;
+            }
+        }
+        create(&dir)?;
+        std::fs::write(&marker, me.as_bytes())
+            .map_err(|e| format!("Could not write {}: {e}", marker.display()))?;
+        return Ok(dir);
+    }
+}
+
+/// `folder`, or the default folder under Pictures\Wallpaper Splitter, created. Also returns the file names
+/// already taken: the source photo's own, when it lives in that folder, so an export never overwrites it.
 fn output_folder(
     folder: &str,
     image: &Path,
     stem: &str,
 ) -> Result<(PathBuf, HashSet<String>), String> {
     let folder = if folder.trim().is_empty() {
-        pictures_folder()?
-            .join("Wallpaper Splitter")
-            .join(sanitize(stem))
+        default_folder(&pictures_folder()?.join("Wallpaper Splitter"), stem, image)?
     } else {
-        PathBuf::from(folder.trim())
+        let f = PathBuf::from(folder.trim());
+        create(&f)?;
+        f
     };
-    std::fs::create_dir_all(&folder)
-        .map_err(|e| format!("Could not create the folder {}: {e}", folder.display()))?;
     let canon = |p: &Path| p.canonicalize().ok();
     let mut used = HashSet::new();
     if image.parent().and_then(canon).is_some() && image.parent().and_then(canon) == canon(&folder)

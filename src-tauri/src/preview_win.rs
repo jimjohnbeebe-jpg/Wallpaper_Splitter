@@ -3,6 +3,7 @@
 // Everything here runs on helper threads: building a webview from a synchronous command deadlocks.
 use crate::model::Rect;
 use crate::{hdr, preview};
+use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 use tauri::window::Color;
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow};
@@ -52,10 +53,47 @@ fn wait_gone(app: &AppHandle, prefix: &str) {
     }
 }
 
-pub fn hdr_off(gdi_names: &[String]) {
-    for gdi in gdi_names {
-        let _ = hdr::set(gdi, false);
+/// gdi names of the monitors whose HDR the preview switched on and that are not back off yet. The lock is
+/// held across every switch, so a restore (closing the preview, or app exit) waits for a switch-on in
+/// progress instead of overtaking it, and nothing is forgotten before it is really off.
+static HDR_ON: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+fn guard(list: &Mutex<Vec<String>>) -> MutexGuard<'_, Vec<String>> {
+    list.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Records `gdi`, then switches it on, unless the preview is gone (`current` false; returns false).
+fn switch_on(
+    list: &Mutex<Vec<String>>,
+    gdi: &str,
+    current: impl Fn() -> bool,
+    set: impl Fn(&str, bool),
+) -> bool {
+    let mut l = guard(list);
+    if !current() {
+        return false;
     }
+    l.push(gdi.to_string()); // kept even if switching fails: switching off an off monitor is a no-op
+    set(gdi, true);
+    true
+}
+
+/// Switches every recorded monitor back off, then forgets them.
+fn switch_off(list: &Mutex<Vec<String>>, set: impl Fn(&str, bool)) {
+    let mut l = guard(list);
+    for gdi in l.iter() {
+        set(gdi, false);
+    }
+    l.clear();
+}
+
+fn set_hdr(gdi: &str, on: bool) {
+    let _ = hdr::set(gdi, on);
+}
+
+/// Switches HDR back off wherever the preview switched it on. Blocks until done.
+pub fn hdr_restore() {
+    switch_off(&HDR_ON, set_hdr);
 }
 
 fn current(app: &AppHandle, gen: u64) -> bool {
@@ -65,8 +103,7 @@ fn current(app: &AppHandle, gen: u64) -> bool {
         .is_some_and(|p| p.gen == gen)
 }
 
-/// Switches HDR on for the preview's monitors that support it and have it off, remembering each one so
-/// close() can switch it back; if the preview closed meanwhile, switches it straight back.
+/// Switches HDR on for the preview's monitors that support it and have it off, while the preview is open.
 fn hdr_on(app: &AppHandle, gen: u64) {
     let gdis: Vec<String> = match preview::lock(app).preview.as_ref() {
         Some(p) if p.gen == gen => p
@@ -78,17 +115,11 @@ fn hdr_on(app: &AppHandle, gen: u64) {
     };
     for gdi in gdis {
         let before = hdr::get(&gdi);
-        if !before.supported || before.enabled {
-            continue;
-        }
-        let _ = hdr::set(&gdi, true); // remembered even on error: switching off an off monitor is a no-op
-        let mut s = preview::lock(app);
-        match s.preview.as_mut() {
-            Some(p) if p.gen == gen => p.hdr_on.push(gdi),
-            _ => {
-                drop(s);
-                hdr_off(&[gdi]);
-            }
+        if before.supported
+            && !before.enabled
+            && !switch_on(&HDR_ON, &gdi, || current(app, gen), set_hdr)
+        {
+            return;
         }
     }
 }
@@ -166,6 +197,36 @@ pub fn identify_windows(app: &AppHandle, gen: u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
+
+    #[test]
+    fn a_restore_waits_for_a_switch_on_in_progress() {
+        let list = Arc::new(Mutex::new(Vec::new()));
+        let log = Arc::new(Mutex::new(Vec::<(String, bool)>::new()));
+        let (l, g) = (list.clone(), log.clone());
+        let slow_on = std::thread::spawn(move || {
+            switch_on(
+                &l,
+                "A",
+                || true,
+                |gdi, on| {
+                    std::thread::sleep(Duration::from_millis(200));
+                    g.lock().unwrap().push((gdi.into(), on));
+                },
+            )
+        });
+        std::thread::sleep(Duration::from_millis(50)); // the switch-on is under way
+        switch_off(&list, |gdi, on| log.lock().unwrap().push((gdi.into(), on)));
+        assert!(slow_on.join().unwrap());
+        assert_eq!(
+            *log.lock().unwrap(),
+            [("A".to_string(), true), ("A".to_string(), false)]
+        );
+        assert!(list.lock().unwrap().is_empty());
+        // Once the preview is gone, nothing is switched on or recorded.
+        assert!(!switch_on(&list, "B", || false, |_, _| panic!("switched")));
+        assert!(list.lock().unwrap().is_empty());
+    }
 
     #[test]
     fn identify_window_is_centred_in_physical_pixels() {

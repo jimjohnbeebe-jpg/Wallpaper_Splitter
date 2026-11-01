@@ -67,6 +67,20 @@ test("changes are saved once, 500 ms after the last one, and layout requests coa
   expect(m.stored().last?.image).toBe("C:\\p\\b.jpg");
 });
 
+test("closing the window saves a waiting change at once, and only once", async () => {
+  const m = mockApi();
+  const app = createApp(m.api);
+  await app.start();
+  app.setPrefs({ span: true });
+  await app.flush();
+  expect(m.count("saveSettings")).toBe(1);
+  expect(m.stored().prefs.span).toBe(true);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(m.count("saveSettings")).toBe(1);
+  await app.flush(); // nothing waiting: no save
+  expect(m.count("saveSettings")).toBe(1);
+});
+
 test("reopening a recent image restores its framing", async () => {
   const m = mockApi({ recent: [{ image: "C:\\p\\c.jpg", framing: f(-30) }] });
   const app = createApp(m.api);

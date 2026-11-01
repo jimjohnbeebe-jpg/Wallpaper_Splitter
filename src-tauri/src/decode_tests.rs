@@ -13,7 +13,7 @@ pub fn temp_dir(tag: &str) -> PathBuf {
 }
 
 fn at(src: &Source, x: i64, y: i64) -> Rgb {
-    src.region(x, y, 1, 1, [0.0; 3])[0].0
+    src.region(x, y, 1, 1, [0.0; 3], [0, 0, src.w as i64, src.h as i64])[0].0
 }
 
 /// Linear pixel -> 8/16-bit sRGB code, to compare with the fixture README's code values.

@@ -1,5 +1,6 @@
 // App state: monitors, the placed calibration, the open image, framing, layout, settings. One store, one
-// emit; pages subscribe and sync. Settings are saved 500 ms after the last change. No DOM in this file.
+// emit; pages subscribe and sync. Settings are saved 500 ms after the last change, and at once when the
+// window closes (flush). No DOM in this file.
 import type { Align, api as realApi, ExportJob, Framing, ImageInfo, Layout, MonitorInfo, PlacedMonitor, Prefs, Session, Settings } from "./ipc.ts";
 import { clampZoom } from "./geom.ts";
 
@@ -20,7 +21,7 @@ export type AppState = {
 
 export const defaultFraming = (): Framing => ({ fit: "cover", zoom: 1, offsetMm: { x: 0, y: 0 } });
 export const defaultPrefs = (): Prefs => ({
-  format: { kind: "png" }, folder: "", template: "{image}_{monitor}_{w}x{h}", span: false, applyAfterExport: true,
+  format: { kind: "png" }, folder: "", template: "{image}_{monitor}_{w}x{h}", span: false,
   fill: "#000000", jpegImportFix: false, hdrOutput: true, autoHdrPreview: true, sdrWhiteNits: null, hdrPreview: true, reopenLast: true,
 });
 const defaultSettings = (): Settings => ({ version: 1, prefs: defaultPrefs(), last: null, recent: [], calibrations: {} });
@@ -68,9 +69,16 @@ export function createApp(api: Api, saveDelay = 500) {
   const fail = (e: unknown): void => { st.result = { kind: "error", text: errText(e) }; emit(); };
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  let saving: Promise<void> = Promise.resolve();
+  const write = (): Promise<void> => {
+    clearTimeout(saveTimer);
+    saveTimer = undefined;
+    saving = api.saveSettings(st.settings).catch(fail);
+    return saving;
+  };
   const save = (): void => {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => void api.saveSettings(st.settings).catch(fail), saveDelay);
+    saveTimer = setTimeout(() => void write(), saveDelay);
   };
 
   let layoutQueued = false;
@@ -103,6 +111,9 @@ export function createApp(api: Api, saveDelay = 500) {
     subscribe(f: () => void): () => void { subs.add(f); return () => void subs.delete(f); },
     emit,
     fail,
+    /** Saves a waiting change now (the window is closing); resolves once the save, or one already
+     *  under way, has finished. Never rejects. */
+    flush: (): Promise<void> => (saveTimer === undefined ? saving : write()),
 
     async start(): Promise<void> {
       try { st.settings = { ...defaultSettings(), ...(await api.getSettings()) }; } catch (e) { fail(e); }

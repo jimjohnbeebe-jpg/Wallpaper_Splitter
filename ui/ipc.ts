@@ -70,7 +70,6 @@ export type Prefs = {
   folder: string; // "" = Pictures\Wallpaper Splitter\<image>
   template: string; // tokens: {image} {monitor} {index} {w} {h}
   span: boolean; // also write one spanning image
-  applyAfterExport: boolean;
   fill: string; // #rrggbb for uncovered areas
   jpegImportFix: boolean; // HKCU\Control Panel\Desktop\JPEGImportQuality = 100
   hdrOutput: boolean; // write JXR when the source is HDR
@@ -98,7 +97,7 @@ export type ExportResult = { files: { monitorId: string; path: string }[]; spanF
 type Tauri = {
   core: { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>; convertFileSrc: (path: string) => string };
   event: { listen: <T>(event: string, cb: (e: { payload: T }) => void) => Promise<() => void> };
-  window: { getCurrentWindow: () => { label: string } };
+  window: { getCurrentWindow: () => { label: string; onCloseRequested: (cb: () => Promise<void>) => Promise<() => void> } };
   webviewWindow: {
     getCurrentWebviewWindow: () => { onDragDropEvent: (cb: (e: { payload: DragDrop }) => void) => Promise<() => void> };
   };
@@ -111,6 +110,9 @@ export const fileUrl = (path: string): string => tauri().core.convertFileSrc(pat
 export const listen = <T>(event: string, cb: (payload: T) => void): Promise<() => void> =>
   tauri().event.listen<T>(event, (e) => cb(e.payload));
 export const windowLabel = (): string => tauri().window.getCurrentWindow().label;
+/** Runs `before` when this window is asked to close, and closes it once that has finished. */
+export const onCloseRequested = (before: () => Promise<void>): Promise<() => void> =>
+  tauri().window.getCurrentWindow().onCloseRequested(before);
 
 /** Tauri's file drag-and-drop on the current window (UI helper, not a backend command). */
 export type DragDrop =

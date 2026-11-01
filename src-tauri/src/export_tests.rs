@@ -165,3 +165,33 @@ fn never_overwrites_the_source_photo() {
     assert_eq!(image::image_dimensions(&src).unwrap(), (128, 64));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn default_folders_keep_photos_with_the_same_name_apart() {
+    let root = temp_dir("export-default");
+    let (a, b) = (
+        root.join("a").join("pic.jpg"),
+        root.join("b").join("pic.jpg"),
+    );
+    let fa = default_folder(&root, "pic", &a).unwrap();
+    assert_eq!(fa, root.join("pic"));
+    assert_eq!(
+        std::fs::read_to_string(fa.join(".source")).unwrap(),
+        a.to_string_lossy()
+    );
+    assert_eq!(
+        default_folder(&root, "pic", &b).unwrap(),
+        root.join("pic (2)")
+    );
+    // The same photo again (any case) goes back to its own folder.
+    let upper = PathBuf::from(a.to_string_lossy().to_uppercase());
+    assert_eq!(default_folder(&root, "pic", &upper).unwrap(), fa);
+    assert_eq!(
+        default_folder(&root, "pic", &b).unwrap(),
+        root.join("pic (2)")
+    );
+    // A folder from before markers existed is taken over by the first photo that uses it.
+    std::fs::create_dir_all(root.join("old")).unwrap();
+    assert_eq!(default_folder(&root, "old", &a).unwrap(), root.join("old"));
+    let _ = std::fs::remove_dir_all(&root);
+}

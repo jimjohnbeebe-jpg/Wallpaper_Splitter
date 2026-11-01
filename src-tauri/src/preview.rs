@@ -16,8 +16,6 @@ pub struct Preview {
     pub windows: Vec<usize>,
     pub selected: usize,
     pub grid: bool,
-    /// gdi names of the monitors whose HDR this preview switched on, to switch off again.
-    pub hdr_on: Vec<String>,
 }
 
 impl Preview {
@@ -34,7 +32,6 @@ impl Preview {
             monitors,
             tiles: Vec::new(),
             grid: false,
-            hdr_on: Vec::new(),
         };
         p.retile();
         p
@@ -156,9 +153,9 @@ pub fn close_gen(app: &AppHandle, gen: u64) {
             _ => None,
         }
     };
-    if let Some(p) = taken {
+    if taken.is_some() {
         win::close_labeled(app, "preview-");
-        std::thread::spawn(move || win::hdr_off(&p.hdr_on));
+        std::thread::spawn(win::hdr_restore); // off the UI thread; app exit still waits for it
         let _ = app.emit("preview-closed", ());
     }
 }
@@ -216,13 +213,11 @@ pub fn identify(app: &AppHandle, monitors: Vec<MonitorInfo>) -> Result<(), Strin
     Ok(())
 }
 
-/// For app exit: switch HDR back off right now, on this thread.
+/// For app exit: switch HDR back off right now, on this thread, including any restore or switch-on still
+/// running on a helper thread (it is waited for). Dropping the preview first stops further switch-ons.
 pub fn restore_hdr(app: &AppHandle) {
-    let list = lock(app)
-        .preview
-        .as_mut()
-        .map(|p| std::mem::take(&mut p.hdr_on));
-    win::hdr_off(&list.unwrap_or_default());
+    lock(app).preview = None;
+    win::hdr_restore();
 }
 
 #[cfg(test)]

@@ -62,7 +62,6 @@ export function prefsPage(app: App): Page {
     add(quality),
     add(folder), add(template), add(exampleField),
     add(switchField("Also export one spanning image", "One file across all monitors, beside the per-monitor files", () => p().span, (v) => set({ span: v }))),
-    add(switchField("Set wallpaper after export", "Use the exported files as the wallpaper straight away", () => p().applyAfterExport, (v) => set({ applyAfterExport: v }))),
     add(fill),
     add(switchField("JPEG import fix", "Stop Windows recompressing JPG wallpapers (sets JPEGImportQuality to 100)", () => p().jpegImportFix, (v) => set({ jpegImportFix: v }))));
 

@@ -117,7 +117,8 @@ mod tests {
         let dir = temp_dir("partial");
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("settings.json");
-        std::fs::write(&file, r#"{"prefs":{"span":true}}"#).unwrap();
+        // Keys this version no longer has (applyAfterExport was removed) are ignored.
+        std::fs::write(&file, r#"{"prefs":{"span":true,"applyAfterExport":true}}"#).unwrap();
         let s = load_from(&file);
         assert!(s.prefs.span);
         assert_eq!(s.prefs.template, Prefs::default().template);

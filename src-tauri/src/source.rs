@@ -162,21 +162,32 @@ impl Source {
         Source { w, h, px, ..self }
     }
 
-    /// Linear BT.709 pixels of the `w` x `h` block at (`x0`, `y0`); anything outside the image is `fill`.
-    pub fn region(&self, x0: i64, y0: i64, w: u32, h: u32, fill: Rgb) -> Vec<F32x3> {
+    /// Linear BT.709 pixels of the `w` x `h` block at (`x0`, `y0`). Each position is first clamped into
+    /// `keep` ([x0, y0, x1, y1], which holds the whole image); anything still outside the image is `fill`.
+    /// So past `keep` the nearest edge repeats, and Lanczos never pulls `fill` into an image edge.
+    pub fn region(
+        &self,
+        x0: i64,
+        y0: i64,
+        w: u32,
+        h: u32,
+        fill: Rgb,
+        keep: [i64; 4],
+    ) -> Vec<F32x3> {
         let lin = Linearise::new(self);
         let (sw, sh) = (self.w as i64, self.h as i64);
         let mut out = vec![F32x3::new(fill); w as usize * h as usize];
-        let (xa, xb) = (x0.max(0), (x0 + w as i64).min(sw));
         for ry in 0..h as i64 {
-            let sy = y0 + ry;
-            if sy < 0 || sy >= sh || xa >= xb {
+            let sy = (y0 + ry).clamp(keep[1], keep[3] - 1);
+            if sy < 0 || sy >= sh {
                 continue;
             }
             let row = &mut out[(ry * w as i64) as usize..][..w as usize];
-            for sx in xa..xb {
-                let i = ((sy * sw + sx) * 3) as usize;
-                row[(sx - x0) as usize] = F32x3::new(lin.at(&self.px, i));
+            for (rx, p) in row.iter_mut().enumerate() {
+                let sx = (x0 + rx as i64).clamp(keep[0], keep[2] - 1);
+                if (0..sw).contains(&sx) {
+                    *p = F32x3::new(lin.at(&self.px, ((sy * sw + sx) * 3) as usize));
+                }
             }
         }
         out
@@ -215,7 +226,14 @@ pub fn render(
     let (rx, ry) = (bx.floor() as i64 - margin, by.floor() as i64 - margin);
     let rw = ((bx + bw).ceil() as i64 + margin - rx) as u32;
     let rh = ((by + bh).ceil() as i64 + margin - ry) as u32;
-    let region = src.region(rx, ry, rw, rh, fill);
+    // Fill only where the crop itself leaves the image; past the crop and the image, edges repeat.
+    let keep = [
+        (crop.x.round() as i64).min(0),
+        (crop.y.round() as i64).min(0),
+        ((crop.x + crop.w).round() as i64).max(src.w as i64),
+        ((crop.y + crop.h).round() as i64).max(src.h as i64),
+    ];
+    let region = src.region(rx, ry, rw, rh, fill, keep);
     let view = TypedImageRef::new(rw, rh, &region).map_err(|_| "Internal error: bad crop size")?;
     let (tw, th) = (dx1 - dx0, dy1 - dy0);
     let mut dst = TypedImage::<F32x3>::new(tw, th);

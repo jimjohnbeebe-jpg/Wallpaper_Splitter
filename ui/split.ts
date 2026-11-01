@@ -58,6 +58,8 @@ export function splitPage(app: App): Page {
     else if (e.key === "F11" && !e.ctrlKey && !e.altKey) act = () => void app.run("preview");
     if (!act) return;
     e.preventDefault();
+    // Number fields commit on 'change': blurring fires it now, so the job sees a value still being typed.
+    if (document.activeElement instanceof HTMLInputElement) document.activeElement.blur();
     act();
   };
   document.addEventListener("keydown", onKey);
