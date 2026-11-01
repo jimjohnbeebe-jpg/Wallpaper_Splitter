@@ -99,6 +99,10 @@ type Tauri = {
   core: { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>; convertFileSrc: (path: string) => string };
   event: { listen: <T>(event: string, cb: (e: { payload: T }) => void) => Promise<() => void> };
   window: { getCurrentWindow: () => { label: string } };
+  webviewWindow: {
+    getCurrentWebviewWindow: () => { onDragDropEvent: (cb: (e: { payload: DragDrop }) => void) => Promise<() => void> };
+  };
+  dialog?: { open: (o: { directory?: boolean; title?: string }) => Promise<string | string[] | null> };
 };
 const tauri = (): Tauri => (globalThis as unknown as { __TAURI__: Tauri }).__TAURI__;
 const call = <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => tauri().core.invoke<T>(cmd, args);
@@ -107,6 +111,20 @@ export const fileUrl = (path: string): string => tauri().core.convertFileSrc(pat
 export const listen = <T>(event: string, cb: (payload: T) => void): Promise<() => void> =>
   tauri().event.listen<T>(event, (e) => cb(e.payload));
 export const windowLabel = (): string => tauri().window.getCurrentWindow().label;
+
+/** Tauri's file drag-and-drop on the current window (UI helper, not a backend command). */
+export type DragDrop =
+  | { type: "enter" | "drop"; paths: string[]; position: { x: number; y: number } }
+  | { type: "over"; position: { x: number; y: number } }
+  | { type: "leave" };
+export const onDragDrop = (cb: (e: DragDrop) => void): Promise<() => void> =>
+  tauri().webviewWindow.getCurrentWebviewWindow().onDragDropEvent((e) => cb(e.payload));
+/** The dialog plugin's folder picker, when its global script is present (withGlobalTauri). */
+export const hasFolderPicker = (): boolean => tauri().dialog !== undefined;
+export const pickFolder = async (): Promise<string | null> => {
+  const r = await tauri().dialog?.open({ directory: true, title: "Choose the export folder" });
+  return typeof r === "string" ? r : null;
+};
 
 export const api = {
   listMonitors: () => call<MonitorInfo[]>("list_monitors"),
