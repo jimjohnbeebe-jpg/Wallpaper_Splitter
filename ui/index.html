@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wallpaper Splitter</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="main.js"></script>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Pages">
+    <button class="nav-item" aria-current="page" data-page="split">Split</button>
+    <button class="nav-item" data-page="monitors">Monitors</button>
+    <button class="nav-item" data-page="prefs">Preferences</button>
+  </nav>
+  <main class="content" id="page">
+    <section class="table" aria-label="Light table"></section>
+    <aside class="inspector">
+      <div class="group"><h2>Source</h2><p class="muted">Open an image to start.</p></div>
+      <button class="btn primary" disabled>Set wallpaper</button>
+      <button class="btn secondary" disabled>Export only</button>
+    </aside>
+  </main>
+  <footer class="status" role="status"><span class="cell">No image open</span></footer>
+</div>
+</body>
+</html>

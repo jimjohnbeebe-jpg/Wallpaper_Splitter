@@ -1,0 +1,38 @@
+name: Something does not work
+description: The split, the preview, the export or setting the wallpaper went wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: monitors
+    attributes:
+      label: Your monitors
+      description: Model and resolution of each, and how they are arranged (side by side, stacked, portrait).
+      placeholder: "Left: Samsung LU28R55 3840x2160. Right: BenQ EW3270U 3840x2160."
+    validations:
+      required: true
+  - type: input
+    id: image
+    attributes:
+      label: Image type
+      placeholder: "Ultra HDR JPEG from Lightroom, 6000x4000"
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 25H2"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Wallpaper Splitter version
+      placeholder: "1.0.0"
+    validations:
+      required: true

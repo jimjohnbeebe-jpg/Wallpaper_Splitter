@@ -1,0 +1,26 @@
+# Jim's own photos, exports and scripts live in this folder but are never published (plan decision 2026-11-01).
+*.jpg
+*.jpeg
+*.png
+*.jxr
+*.tif
+*.tiff
+*.avif
+*.jxl
+*.webp
+*.bat
+SplitforDualMonitor28and32.py
+New folder/
+# ...except the app's own icons.
+!src-tauri/icons/*.png
+
+# Build output
+node_modules/
+ui-dist/
+src-tauri/target/
+src-tauri/gen/
+release/
+
+# Local
+.env
+*.tmp

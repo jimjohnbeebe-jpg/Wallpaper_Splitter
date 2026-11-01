@@ -1,0 +1,25 @@
+{
+  "name": "wallpaper-splitter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Split one image into per-monitor wallpapers that line up across monitors of any size, resolution and pixel density.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build:ui": "node build-ui.ts",
+    "dev": "node build-ui.ts && tauri dev",
+    "build": "node build-ui.ts && tauri build --no-bundle",
+    "typecheck": "tsc -p ui/tsconfig.json",
+    "test": "vitest run",
+    "test:rust": "cd src-tauri && cargo test --quiet"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.1",
+    "@types/node": "24.13.6",
+    "typescript": "7.0.2",
+    "vitest": "5.0.1"
+  }
+}

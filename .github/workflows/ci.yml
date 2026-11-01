@@ -1,0 +1,43 @@
+# The required check on main (`ci`): typecheck, UI tests, Rust format, lint and tests, on Windows
+# because the backend calls Win32 APIs.
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: "24.11.1"
+          cache: npm
+      # The toolchain on Jim's PC (rustc 1.99.0).
+      - run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy && rustup default 1.99.0
+      - uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:ui
+      - working-directory: src-tauri
+        run: cargo fmt --check
+      - working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+      - working-directory: src-tauri
+        run: cargo test

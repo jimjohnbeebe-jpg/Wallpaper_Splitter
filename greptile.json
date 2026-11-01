@@ -1,0 +1,7 @@
+{
+  "strictness": 3,
+  "commentTypes": ["logic"],
+  "autoReview": ["open"],
+  "ignorePatterns": "**/*.md\ndocs/**\nui/fonts/**\nsrc-tauri/icons/**",
+  "instructions": "Review for real defects in code only: logic errors, crashes, wrong results, data loss, race conditions, and security issues. Do not comment on documentation, code comments, or README wording. Do not suggest extra tests, stricter test checks, or style changes unless they hide a real defect."
+}

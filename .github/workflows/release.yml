@@ -1,0 +1,69 @@
+# A v* tag builds the portable exe and attaches it, with SHA256SUMS.txt, to a draft GitHub release
+# (a pre-release when the tag has a suffix, v1.0.0-rc.1); Jim publishes the draft. A PR that touches
+# this file or the Tauri config builds the same exe without releasing it.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/release.yml
+      - src-tauri/tauri.conf.json
+      - src-tauri/Cargo.toml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    permissions:
+      contents: write # gh release create
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: "24.11.1"
+          cache: npm
+      - run: rustup toolchain install 1.99.0 --profile minimal && rustup default 1.99.0
+      - name: Versions agree
+        run: |
+          v=$(node -p "require('./package.json').version")
+          c=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          r=$(grep -m1 '^version' src-tauri/Cargo.toml | cut -d'"' -f2)
+          [ "$v" = "$c" ] && [ "$v" = "$r" ] || { echo "package.json $v, tauri.conf.json $c, Cargo.toml $r"; exit 1; }
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - name: Tag matches the version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          case "$GITHUB_REF_NAME" in
+            "v$VERSION" | "v$VERSION"-rc.*) echo "tag $GITHUB_REF_NAME, version $VERSION" ;;
+            *) echo "tag $GITHUB_REF_NAME does not match version $VERSION"; exit 1 ;;
+          esac
+      - run: npm ci
+      - run: npm run build
+      - name: Stage
+        run: |
+          mkdir -p release
+          cp src-tauri/target/release/WallpaperSplitter.exe "release/WallpaperSplitter-$VERSION.exe"
+          cd release && sha256sum WallpaperSplitter-*.exe > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: exe
+          path: release/*
+          if-no-files-found: error
+      - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pre=""
+          case "$GITHUB_REF_NAME" in *-*) pre="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" release/WallpaperSplitter-*.exe release/SHA256SUMS.txt \
+            --draft $pre --verify-tag --title "Wallpaper Splitter $GITHUB_REF_NAME" --generate-notes

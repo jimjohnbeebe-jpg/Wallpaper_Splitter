@@ -1,0 +1,34 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Wallpaper Splitter",
+  "mainBinaryName": "WallpaperSplitter",
+  "version": "0.1.0",
+  "identifier": "com.jimbeebe.wallpapersplitter",
+  "build": {
+    "frontendDist": "../ui-dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Wallpaper Splitter",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 600,
+        "theme": "Dark",
+        "backgroundColor": "#202122",
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self'; font-src 'self'",
+      "assetProtocol": { "enable": true, "scope": [] }
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"]
+  }
+}

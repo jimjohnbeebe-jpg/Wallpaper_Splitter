@@ -1,0 +1,53 @@
+[package]
+name = "wallpaper-splitter"
+version = "0.1.0"
+description = "Split one image into per-monitor wallpapers that line up across monitors of any size."
+edition = "2021"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "WallpaperSplitter"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.1", features = [] }
+
+[dependencies]
+# Pinned exactly, as LrC-AVG pins (CLAUDE.md "Dependencies"). No AGPL crates (the imazen "zen*" family).
+tauri = { version = "=2.12.1", features = ["protocol-asset"] }
+tauri-plugin-dialog = "=2.8.4"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "tiff", "webp"] }
+zune-jpeg = "=0.5.15"
+ultrahdr-rs = { version = "=0.3.5", default-features = false }
+jxl-oxide = "=0.12.6"
+fast_image_resize = "=6.1.0"
+half = "=2.7.1"
+windows = { version = "=0.62.2", features = [
+  "Win32_Foundation",
+  "Win32_Devices_Display",
+  "Win32_Devices_DeviceAndDriverInstallation",
+  "Win32_Graphics_Gdi",
+  "Win32_Graphics_Imaging",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_Registry",
+  "Win32_System_Variant",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+# Size settings as LrC-AVG hud/src-tauri/Cargo.toml.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
+
+# Image decoding is unbearably slow unoptimised; tests and `tauri dev` still build fast.
+[profile.dev.package."*"]
+opt-level = 3
