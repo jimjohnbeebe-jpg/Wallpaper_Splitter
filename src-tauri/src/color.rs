@@ -76,7 +76,11 @@ pub fn hlg_inverse_oetf(e: f32) -> f32 {
 
 /// HLG signal (BT.2020 primaries) -> display nits through the BT.2100 OOTF for a 1000-nit display.
 pub fn hlg_to_nits(signal: Rgb) -> Rgb {
-    let s = signal.map(hlg_inverse_oetf);
+    hlg_ootf(signal.map(hlg_inverse_oetf))
+}
+
+/// BT.2100 HLG OOTF (system gamma 1.2, 1000-nit display): scene light 0..1 -> nits.
+pub fn hlg_ootf(s: Rgb) -> Rgb {
     let ys = 0.2627 * s[0] + 0.6780 * s[1] + 0.0593 * s[2];
     let k = 1000.0 * ys.max(0.0).powf(0.2);
     s.map(|v| v * k)

@@ -42,7 +42,11 @@ pub fn compute_layout(
         Fit::Cover => (w / b.w).min(h / b.h),
         Fit::Contain => (w / b.w).max(h / b.h),
     };
-    let zoom = if framing.zoom > 0.0 { framing.zoom } else { 1.0 };
+    let zoom = if framing.zoom > 0.0 {
+        framing.zoom
+    } else {
+        1.0
+    };
     let k = fit / zoom;
     let (cx, cy) = (b.x + b.w / 2.0, b.y + b.h / 2.0);
     let off = framing.offset_mm;
@@ -174,8 +178,14 @@ pub fn span_canvas(monitors: &[MonitorInfo]) -> Span {
             origin_y: 0,
         };
     }
-    let x0 = monitors.iter().map(|m| m.px.x).fold(f64::INFINITY, f64::min);
-    let y0 = monitors.iter().map(|m| m.px.y).fold(f64::INFINITY, f64::min);
+    let x0 = monitors
+        .iter()
+        .map(|m| m.px.x)
+        .fold(f64::INFINITY, f64::min);
+    let y0 = monitors
+        .iter()
+        .map(|m| m.px.y)
+        .fold(f64::INFINITY, f64::min);
     let x1 = monitors
         .iter()
         .map(|m| m.px.x + m.px.w)
