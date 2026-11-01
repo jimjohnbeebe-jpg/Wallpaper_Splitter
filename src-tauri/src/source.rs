@@ -120,13 +120,12 @@ impl Source {
             self.headroom = 1.0;
             return;
         }
+        // The brightest BT.709 channel after conversion: saturated wide-gamut colours outgrow grey.
         let lin = Linearise::new(self);
-        let peak = match &self.px {
-            Pixels::U8(v) => lin.lut[*v.iter().max().unwrap_or(&0) as usize],
-            Pixels::U16(v) => lin.lut[*v.iter().max().unwrap_or(&0) as usize],
-            Pixels::F16(v) => v.iter().map(|x| x.to_f32()).fold(0.0, f32::max),
-        };
-        self.headroom = lin.finish([peak; 3])[1].max(1.0);
+        let peak = (0..self.w as usize * self.h as usize)
+            .map(|p| lin.at(&self.px, p * 3).into_iter().fold(0.0, f32::max))
+            .fold(0.0, f32::max);
+        self.headroom = peak.max(1.0);
     }
 
     /// Applies an EXIF-style orientation (rotations and flips only move samples).

@@ -36,19 +36,19 @@ fn encode(rgb: &[Rgb], jxr: bool, peak: f32, sdr_white_nits: f64) -> Out {
     }
 }
 
+/// `#rrggbb` -> sRGB bytes. Anything unparsable is black.
+pub fn fill_bytes(hex: &str) -> [u8; 3] {
+    let h = hex.trim().trim_start_matches('#');
+    let c = |i: usize| h.get(i..i + 2).and_then(|s| u8::from_str_radix(s, 16).ok());
+    match (h.len(), c(0), c(2), c(4)) {
+        (6, Some(r), Some(g), Some(b)) => [r, g, b],
+        _ => [0; 3],
+    }
+}
+
 /// `#rrggbb` -> linear BT.709. Anything unparsable is black.
 pub fn parse_fill(hex: &str) -> Rgb {
-    let h = hex.trim().trim_start_matches('#');
-    let c = |i: usize| {
-        h.get(i..i + 2)
-            .and_then(|s| u8::from_str_radix(s, 16).ok())
-            .map_or(0.0, |v| color::srgb_eotf(v as f32 / 255.0))
-    };
-    if h.len() == 6 {
-        [c(0), c(2), c(4)]
-    } else {
-        [0.0; 3]
-    }
+    fill_bytes(hex).map(|v| color::srgb_eotf(v as f32 / 255.0))
 }
 
 fn write(path: &Path, w: u32, h: u32, out: &Out, format: &ExportFormat) -> Result<(), String> {
@@ -120,17 +120,20 @@ pub fn file_name(
 }
 
 /// Keeps two monitors with the same model and size (or the source photo itself) from sharing a file.
+/// A fallback name can itself be taken (source `a-2.png`, template `a`), so keep counting until one is free.
 fn unique(name: String, used: &mut HashSet<String>, index: usize) -> String {
-    let name = if used.contains(&name.to_lowercase()) {
-        match name.rsplit_once('.') {
-            Some((stem, ext)) => format!("{stem}-{index}.{ext}"),
-            None => format!("{name}-{index}"),
-        }
-    } else {
-        name
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((s, e)) => (s.to_string(), format!(".{e}")),
+        None => (name.clone(), String::new()),
     };
-    used.insert(name.to_lowercase());
-    name
+    let mut candidate = name;
+    let mut n = index;
+    while used.contains(&candidate.to_lowercase()) {
+        candidate = format!("{stem}-{n}{ext}");
+        n += 1;
+    }
+    used.insert(candidate.to_lowercase());
+    candidate
 }
 
 fn pictures_folder() -> Result<PathBuf, String> {
@@ -261,7 +264,7 @@ pub fn export(
 ) -> Result<ExportResult, String> {
     let prefs = &job.prefs;
     let jxr = matches!(prefs.format, ExportFormat::Jxr);
-    let src = decode::load(&job.image, jxr)?;
+    let src = decode::load(&job.image, jxr, fill_bytes(&prefs.fill))?;
     if jxr && !src.hdr {
         return Err(
             "JPEG XR is for HDR images, and this image is SDR. Choose PNG or JPG instead.".into(),

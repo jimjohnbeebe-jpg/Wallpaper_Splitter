@@ -22,7 +22,7 @@ fn code(v: f32, max: f32) -> f32 {
 }
 
 fn check_sdr(name: &str, max: f32, tol: f32) {
-    let src = load(&fixture(name), false).unwrap();
+    let src = load(&fixture(name), false, [0; 3]).unwrap();
     assert_eq!((src.w, src.h, src.hdr), (128, 64, false), "{name}");
     let expect = [
         (32, 0, 16513.0),
@@ -94,7 +94,7 @@ fn check_hdr(src: &Source, name: &str, rel: f32, red_is_2020: bool) {
 #[test]
 fn jxl_pq_and_hlg_decode_to_linear_light() {
     for name in ["hdr_pq16_bt2020.jxl", "hdr_hlg16_bt2020.jxl"] {
-        let src = load(&fixture(name), true).unwrap();
+        let src = load(&fixture(name), true, [0; 3]).unwrap();
         check_hdr(&src, name, 0.005, true);
     }
 }
@@ -103,9 +103,9 @@ fn jxl_pq_and_hlg_decode_to_linear_light() {
 fn ultrahdr_decodes_hdr_and_its_sdr_base() {
     let p = fixture("hdr_ultrahdr.jpg");
     assert_eq!(sniff(&p).unwrap(), Format::UltraHdr);
-    let src = load(&p, true).unwrap();
+    let src = load(&p, true, [0; 3]).unwrap();
     check_hdr(&src, "ultrahdr", 0.03, false);
-    let base = load(&p, false).unwrap();
+    let base = load(&p, false, [0; 3]).unwrap();
     assert_eq!((base.w, base.h, base.hdr), (128, 64, false));
     assert!(at(&base, 127, 0)[0] <= 1.0);
 }
@@ -116,10 +116,10 @@ fn avif_decodes_through_wic_when_the_extension_is_installed() {
     assert_eq!(sniff(&p).unwrap(), Format::Avif);
     if wic::probe(&p).is_err() {
         eprintln!("skipped: no AV1/HEIF extension (as on CI runners)");
-        assert_eq!(load(&p, true).err().as_deref(), Some(AVIF_HELP));
+        assert_eq!(load(&p, true, [0; 3]).err().as_deref(), Some(AVIF_HELP));
         return;
     }
-    check_hdr(&load(&p, true).unwrap(), "avif", 0.03, true);
+    check_hdr(&load(&p, true, [0; 3]).unwrap(), "avif", 0.03, true);
 }
 
 #[test]
@@ -170,4 +170,22 @@ fn open_reports_formats_and_writes_reusable_proxies() {
 fn icc_descriptions_pick_the_gamut() {
     assert_eq!(icc_space(None), (Transfer::Srgb, Gamut::Bt709));
     assert_eq!(icc_space(Some(b"junk")), (Transfer::Srgb, Gamut::Bt709));
+}
+
+#[test]
+fn transparency_is_laid_onto_the_fill() {
+    // Fully transparent white, half-transparent white, opaque black over a red fill.
+    let px = vec![255, 255, 255, 0, 255, 255, 255, 128, 0, 0, 0, 255];
+    let img = DynamicImage::ImageRgba8(image::ImageBuffer::from_raw(3, 1, px).unwrap());
+    let DynamicImage::ImageRgb16(out) = flatten(img, [255, 0, 0]) else {
+        panic!("not flattened to RGB16");
+    };
+    let p = |i: u32| {
+        out.get_pixel(i, 0)
+            .0
+            .map(|v| (v as f32 / 257.0).round() as u8)
+    };
+    assert_eq!(p(0), [255, 0, 0]);
+    assert_eq!(p(1), [255, 128, 128]);
+    assert_eq!(p(2), [0, 0, 0]);
 }

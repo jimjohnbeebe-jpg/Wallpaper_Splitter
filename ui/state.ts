@@ -83,6 +83,7 @@ export function createApp(api: Api, saveDelay = 500) {
 
   let layoutQueued = false;
   let seq = 0;
+  let openSeq = 0; // only the newest open() applies its result
   const requestLayout = (): void => {
     if (!st.image || st.placed.length === 0 || layoutQueued) return;
     layoutQueued = true;
@@ -143,8 +144,10 @@ export function createApp(api: Api, saveDelay = 500) {
     },
 
     async open(path: string, framing?: Framing): Promise<void> {
+      const seq = ++openSeq;
       try {
         const info = await api.openImage(path);
+        if (seq !== openSeq) return; // a newer open was started while this file was read
         const recent = st.settings.recent.find((r) => samePath(r.image, path));
         st.image = info;
         st.framing = framing ?? recent?.framing ?? defaultFraming();
@@ -154,7 +157,7 @@ export function createApp(api: Api, saveDelay = 500) {
         save();
         requestLayout();
         emit();
-      } catch (e) { fail(e); }
+      } catch (e) { if (seq === openSeq) fail(e); }
     },
 
     /** Ctrl+O: the system file picker, then open. */

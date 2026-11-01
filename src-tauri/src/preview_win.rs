@@ -1,7 +1,7 @@
 // preview_win: the borderless per-monitor windows behind preview.rs (full-screen preview and identify),
 // placed in physical pixels so mixed-DPI desks line up, plus the HDR switching around the preview.
 // Everything here runs on helper threads: building a webview from a synchronous command deadlocks.
-use crate::model::Rect;
+use crate::model::{HdrState, Rect};
 use crate::{hdr, preview};
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
@@ -53,47 +53,58 @@ fn wait_gone(app: &AppHandle, prefix: &str) {
     }
 }
 
-/// gdi names of the monitors whose HDR the preview switched on and that are not back off yet. The lock is
-/// held across every switch, so a restore (closing the preview, or app exit) waits for a switch-on in
-/// progress instead of overtaking it, and nothing is forgotten before it is really off.
-static HDR_ON: Mutex<Vec<String>> = Mutex::new(Vec::new());
+/// The monitors whose HDR the preview switched on and that are not confirmed off yet, each with the
+/// preview generation that owns it. The lock is held across every switch, so a restore (closing the
+/// preview, or app exit) waits for a switch-on in progress instead of overtaking it, and the next preview
+/// reads a monitor's state only after an earlier restore has finished.
+type Owned = Mutex<Vec<(String, u64)>>;
+static HDR_ON: Owned = Mutex::new(Vec::new());
 
-fn guard(list: &Mutex<Vec<String>>) -> MutexGuard<'_, Vec<String>> {
+fn guard(list: &Owned) -> MutexGuard<'_, Vec<(String, u64)>> {
     list.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-/// Records `gdi`, then switches it on, unless the preview is gone (`current` false; returns false).
+/// For preview `gen`: a monitor still on from an earlier preview (its restore has not run yet) is handed
+/// over to this one; a monitor that supports HDR and has it off is recorded, then switched on. Does
+/// nothing once the preview is gone (`current` false; returns false).
 fn switch_on(
-    list: &Mutex<Vec<String>>,
+    list: &Owned,
     gdi: &str,
+    gen: u64,
     current: impl Fn() -> bool,
-    set: impl Fn(&str, bool),
+    get: impl Fn(&str) -> HdrState,
+    set: impl Fn(&str, bool) -> bool,
 ) -> bool {
     let mut l = guard(list);
     if !current() {
         return false;
     }
-    l.push(gdi.to_string()); // kept even if switching fails: switching off an off monitor is a no-op
-    set(gdi, true);
+    if let Some(owned) = l.iter_mut().find(|(g, _)| g == gdi) {
+        owned.1 = gen;
+        return true;
+    }
+    let before = get(gdi);
+    if before.supported && !before.enabled {
+        l.push((gdi.to_string(), gen)); // kept even if switching fails: switching off an off monitor is a no-op
+        set(gdi, true);
+    }
     true
 }
 
-/// Switches every recorded monitor back off, then forgets them.
-fn switch_off(list: &Mutex<Vec<String>>, set: impl Fn(&str, bool)) {
-    let mut l = guard(list);
-    for gdi in l.iter() {
-        set(gdi, false);
-    }
-    l.clear();
+/// Switches off the monitors owned by previews up to `upto`, and forgets only those confirmed off, so the
+/// exit cleanup tries again for any that failed.
+fn switch_off(list: &Owned, upto: u64, set: impl Fn(&str, bool) -> bool) {
+    guard(list).retain(|(gdi, gen)| *gen > upto || !set(gdi, false));
 }
 
-fn set_hdr(gdi: &str, on: bool) {
-    let _ = hdr::set(gdi, on);
+/// Whether the monitor ended up in the requested state.
+fn set_hdr(gdi: &str, on: bool) -> bool {
+    hdr::set(gdi, on).is_ok_and(|s| s.enabled == on)
 }
 
-/// Switches HDR back off wherever the preview switched it on. Blocks until done.
-pub fn hdr_restore() {
-    switch_off(&HDR_ON, set_hdr);
+/// Switches HDR back off wherever previews up to `upto` switched it on (`u64::MAX`: all). Blocks until done.
+pub fn hdr_restore(upto: u64) {
+    switch_off(&HDR_ON, upto, set_hdr);
 }
 
 fn current(app: &AppHandle, gen: u64) -> bool {
@@ -114,11 +125,7 @@ fn hdr_on(app: &AppHandle, gen: u64) {
         _ => return,
     };
     for gdi in gdis {
-        let before = hdr::get(&gdi);
-        if before.supported
-            && !before.enabled
-            && !switch_on(&HDR_ON, &gdi, || current(app, gen), set_hdr)
-        {
+        if !switch_on(&HDR_ON, &gdi, gen, || current(app, gen), hdr::get, set_hdr) {
             return;
         }
     }
@@ -199,24 +206,35 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
+    const OFF: HdrState = HdrState {
+        supported: true,
+        enabled: false,
+    };
+
     #[test]
     fn a_restore_waits_for_a_switch_on_in_progress() {
-        let list = Arc::new(Mutex::new(Vec::new()));
+        let list: Arc<Owned> = Arc::new(Mutex::new(Vec::new()));
         let log = Arc::new(Mutex::new(Vec::<(String, bool)>::new()));
         let (l, g) = (list.clone(), log.clone());
         let slow_on = std::thread::spawn(move || {
             switch_on(
                 &l,
                 "A",
+                1,
                 || true,
+                |_| OFF,
                 |gdi, on| {
                     std::thread::sleep(Duration::from_millis(200));
                     g.lock().unwrap().push((gdi.into(), on));
+                    true
                 },
             )
         });
         std::thread::sleep(Duration::from_millis(50)); // the switch-on is under way
-        switch_off(&list, |gdi, on| log.lock().unwrap().push((gdi.into(), on)));
+        switch_off(&list, 1, |gdi, on| {
+            log.lock().unwrap().push((gdi.into(), on));
+            true
+        });
         assert!(slow_on.join().unwrap());
         assert_eq!(
             *log.lock().unwrap(),
@@ -224,7 +242,32 @@ mod tests {
         );
         assert!(list.lock().unwrap().is_empty());
         // Once the preview is gone, nothing is switched on or recorded.
-        assert!(!switch_on(&list, "B", || false, |_, _| panic!("switched")));
+        let never = |_: &str, _: bool| -> bool { panic!("switched") };
+        assert!(!switch_on(&list, "B", 2, || false, |_| OFF, never));
+        assert!(list.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_reopened_preview_takes_over_hdr_the_last_one_has_not_restored() {
+        let list: Owned = Mutex::new(vec![("A".to_string(), 1)]);
+        let on = HdrState {
+            supported: true,
+            enabled: true,
+        };
+        let never = |_: &str, _: bool| -> bool { panic!("switched") };
+        assert!(switch_on(&list, "A", 2, || true, |_| on, never));
+        switch_off(&list, 1, never); // preview 1's late restore leaves it alone
+        assert_eq!(*list.lock().unwrap(), [("A".to_string(), 2)]);
+        switch_off(&list, 2, |_, _| true);
+        assert!(list.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_failed_restore_is_kept_for_the_exit_cleanup() {
+        let list: Owned = Mutex::new(vec![("A".to_string(), 1), ("B".to_string(), 1)]);
+        switch_off(&list, 1, |gdi, _| gdi == "B");
+        assert_eq!(*list.lock().unwrap(), [("A".to_string(), 1)]);
+        switch_off(&list, u64::MAX, |_, _| true);
         assert!(list.lock().unwrap().is_empty());
     }
 

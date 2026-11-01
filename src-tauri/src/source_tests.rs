@@ -67,6 +67,21 @@ fn hdr_sources_linearise_and_measure_headroom() {
 }
 
 #[test]
+fn headroom_covers_saturated_wide_gamut_colour() {
+    // BT.2020 red at 1000 nits is about 1.66x brighter than that in its BT.709 red channel.
+    let code = (crate::color::pq_inverse_eotf(1000.0) * 65535.0).round() as u16;
+    let px = Pixels::U16(vec![code, 0, 0]);
+    let src = Source::new((1, 1), px, Transfer::Pq, Gamut::Bt2020, 1.0 / 203.0, true);
+    let red = src.region(0, 0, 1, 1, [0.0; 3], [0, 0, 1, 1])[0].0[0];
+    assert!(red > 1000.0 / 203.0 * 1.5, "{red}");
+    assert!(
+        (src.headroom - red).abs() < 1e-3,
+        "{} vs {red}",
+        src.headroom
+    );
+}
+
+#[test]
 fn orientation_rotates_and_keeps_f16_values() {
     let v: Vec<f16> = (0..6 * 3).map(|i| f16::from_f32(i as f32 * 0.5)).collect();
     let src = Source::new(

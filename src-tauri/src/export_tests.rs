@@ -143,6 +143,10 @@ fn names_are_sanitised_and_deduplicated() {
     let mut used = HashSet::new();
     assert_eq!(unique("a.png".into(), &mut used, 1), "a.png");
     assert_eq!(unique("A.png".into(), &mut used, 2), "A-2.png");
+    // The source photo is a-2.png: the second tile skips that name instead of overwriting it.
+    let mut used = HashSet::from(["a-2.png".to_string()]);
+    assert_eq!(unique("a.png".into(), &mut used, 1), "a.png");
+    assert_eq!(unique("a.png".into(), &mut used, 2), "a-3.png");
     assert_eq!(parse_fill("#ffffff"), [1.0; 3]);
     assert_eq!(parse_fill("nope"), [0.0; 3]);
 }

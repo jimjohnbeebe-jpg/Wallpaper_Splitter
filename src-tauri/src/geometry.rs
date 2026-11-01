@@ -54,11 +54,11 @@ pub fn compute_layout(
         .map(|m| {
             let (cw, ch) = (m.mm.w * k, m.mm.h * k);
             let (px_w, px_h) = (m.px_w.max(1), m.px_h.max(1));
-            // Nudge is in output pixels; one output pixel is cw / px_w source pixels.
-            let src_per_out = cw / px_w as f64;
+            // Nudge is in output pixels; one output pixel is cw / px_w source pixels across and ch / px_h
+            // down, which differ when the resolution's shape is not the panel's (4:3 on a 16:9 panel).
             let crop = Rect {
-                x: w / 2.0 + (m.mm.x - cx - off.x) * k + m.nudge_px.x * src_per_out,
-                y: h / 2.0 + (m.mm.y - cy - off.y) * k + m.nudge_px.y * src_per_out,
+                x: w / 2.0 + (m.mm.x - cx - off.x) * k + m.nudge_px.x * cw / px_w as f64,
+                y: h / 2.0 + (m.mm.y - cy - off.y) * k + m.nudge_px.y * ch / px_h as f64,
                 w: cw,
                 h: ch,
             };

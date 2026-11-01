@@ -155,7 +155,7 @@ pub fn close_gen(app: &AppHandle, gen: u64) {
     };
     if taken.is_some() {
         win::close_labeled(app, "preview-");
-        std::thread::spawn(win::hdr_restore); // off the UI thread; app exit still waits for it
+        std::thread::spawn(move || win::hdr_restore(gen)); // off the UI thread; app exit waits for it
         let _ = app.emit("preview-closed", ());
     }
 }
@@ -217,7 +217,7 @@ pub fn identify(app: &AppHandle, monitors: Vec<MonitorInfo>) -> Result<(), Strin
 /// running on a helper thread (it is waited for). Dropping the preview first stops further switch-ons.
 pub fn restore_hdr(app: &AppHandle) {
     lock(app).preview = None;
-    win::hdr_restore();
+    win::hdr_restore(u64::MAX);
 }
 
 #[cfg(test)]

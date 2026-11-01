@@ -152,12 +152,34 @@ fn header(path: &str) -> Result<(u32, u32, Orientation), String> {
     Ok(if turned(o) { (h, w, o) } else { (w, h, o) })
 }
 
+/// Lays a transparent image onto `fill` (sRGB bytes). It blends the encoded values, as the browser does
+/// when the light table shows the image over the fill, so the export matches the preview.
+pub(crate) fn flatten(img: DynamicImage, fill: [u8; 3]) -> DynamicImage {
+    if !img.color().has_alpha() {
+        return img;
+    }
+    let rgba = img.into_rgba16();
+    let (w, h) = rgba.dimensions();
+    let f = fill.map(|c| c as f32 * 257.0);
+    let px = rgba
+        .pixels()
+        .flat_map(|p| {
+            let a = p[3] as f32 / 65535.0;
+            [0, 1, 2].map(|i| (p[i] as f32 * a + f[i] * (1.0 - a)).round() as u16)
+        })
+        .collect();
+    DynamicImage::ImageRgb16(image::ImageBuffer::from_raw(w, h, px).unwrap())
+}
+
 /// JPEG (base image for Ultra HDR), PNG, TIFF and WebP through the image crate.
-fn load_image(path: &str) -> Result<Source, String> {
+fn load_image(path: &str, fill: [u8; 3]) -> Result<Source, String> {
     let mut d = image_decoder(path)?;
     let icc = d.icc_profile().ok().flatten();
     let o = d.orientation().unwrap_or(Orientation::NoTransforms);
-    let img = DynamicImage::from_decoder(d).map_err(|e| read_err(path, e))?;
+    let img = flatten(
+        DynamicImage::from_decoder(d).map_err(|e| read_err(path, e))?,
+        fill,
+    );
     let (w, h) = (img.width(), img.height());
     let px = if img.color().bytes_per_pixel() / img.color().channel_count() > 1 {
         Pixels::U16(img.into_rgb16().into_raw())
@@ -238,12 +260,13 @@ fn load_jxl(path: &str) -> Result<Source, String> {
 }
 
 /// Loads the whole image for export. `want_hdr` picks the HDR rendition of an Ultra HDR JPEG; without
-/// it the JPEG's own SDR base image is used. PQ/HLG/HDR AVIF sources are always HDR.
-pub fn load(path: &str, want_hdr: bool) -> Result<Source, String> {
+/// it the JPEG's own SDR base image is used. PQ/HLG/HDR AVIF sources are always HDR. Transparent PNG,
+/// TIFF and WebP are laid onto `fill` (sRGB bytes).
+pub fn load(path: &str, want_hdr: bool, fill: [u8; 3]) -> Result<Source, String> {
     match sniff(path)? {
         Format::UltraHdr if want_hdr => load_ultrahdr(path),
         Format::Jpeg | Format::UltraHdr | Format::Png | Format::Tiff | Format::Webp => {
-            load_image(path)
+            load_image(path, fill)
         }
         Format::Avif => load_avif(path),
         Format::Jxl => load_jxl(path),
@@ -292,7 +315,7 @@ fn proxy(path: &str, cache_dir: &Path, hdr: bool) -> Result<String, String> {
     if out.is_file() {
         return Ok(out.to_string_lossy().into_owned());
     }
-    let src = load(path, hdr)?;
+    let src = load(path, hdr, [0; 3])?; // the default fill; the proxy is cached per file, not per fill
     let s = (PROXY_MAX as f64 / src.w.max(src.h) as f64).min(1.0);
     let size = |v: u32| ((v as f64 * s).round() as u32).max(1);
     let (w, h) = (size(src.w), size(src.h));

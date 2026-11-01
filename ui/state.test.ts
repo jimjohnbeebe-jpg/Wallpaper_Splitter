@@ -129,3 +129,18 @@ test("pixel sizes follow the monitors, and the mm size turns with a rotated moni
   await app.refreshMonitors(); // same monitors, new resolution
   expect(app.state.placed.find((x) => x.id === benq.id)).toMatchObject({ pxW: 2560, pxH: 1440 });
 });
+
+test("a slow open that finishes after a newer one is ignored", async () => {
+  const m = mockApi({ prefs: { ...mockApi().stored().prefs, reopenLast: false } });
+  const fast = m.api.openImage;
+  let release = (): void => {};
+  m.api.openImage = (path) => path.endsWith(".tif") ? new Promise((r) => { release = () => r(fast(path)); }) : fast(path);
+  const app = createApp(m.api);
+  await app.start();
+  const tiff = app.open("C:\p\big.tif");
+  await app.open("C:\p\small.jpg");
+  release();
+  await tiff;
+  expect(app.state.image?.path).toBe("C:\p\small.jpg");
+  expect(app.state.settings.last?.image).toBe("C:\p\small.jpg");
+});

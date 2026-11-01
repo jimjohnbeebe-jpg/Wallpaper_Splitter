@@ -116,6 +116,11 @@ fn contain_zoom_offset_and_nudge() {
     p[0].nudge_px = Point { x: 10.0, y: -4.0 };
     let c = compute_layout(1000, 1000, &p, &f(Fit::Cover, 1.0, 0.0)).tiles[0].crop;
     assert_eq!((c.x, c.y), (10.0, 246.0));
+    // 4:3 resolution on the 2:1 panel: an output pixel is 1 source px across but 0.5 down.
+    p[0].px_h = 750;
+    p[0].nudge_px = Point { x: 0.0, y: 10.0 };
+    let c = compute_layout(1000, 1000, &p, &f(Fit::Cover, 1.0, 0.0)).tiles[0].crop;
+    assert_eq!(c.y, 250.0 + 10.0 * 500.0 / 750.0);
 }
 
 #[test]
