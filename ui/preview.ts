@@ -94,6 +94,7 @@ function init(): void {
     api.listMonitors().then((ms) => { ms.forEach((m) => names.set(m.id, m.name)); void refresh(root, label); }, () => {});
   }
   void listen<unknown>("preview-changed", () => void refresh(root, label));
+  window.addEventListener("resize", () => void refresh(root, label)); // a scale change resizes the window
   if (label.startsWith("identify")) return;
   document.addEventListener("keydown", (e) => {
     const d = arrowDelta(e.key, e.shiftKey);

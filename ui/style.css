@@ -82,6 +82,7 @@ button { background: none; border: 0; padding: 0; cursor: default; }
 .menu { background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow-float); }
 
 /* ---- shared bits ---- */
+[hidden] { display: none !important; }
 h3 { font-size: 13px; line-height: 16px; font-weight: 500; }
 .glyph { flex: none; }
 .name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -91,6 +92,7 @@ h3 { font-size: 13px; line-height: 16px; font-weight: 500; }
 .input.num::-webkit-inner-spin-button, .input.num::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .input:disabled { color: var(--text3); border-color: var(--line); background: none; }
 .input.wide { flex: 1; user-select: text; }
+.input.wide, .example { font-feature-settings: "calt" 0; } /* Inter would draw 3840x2160 as 3840×2160 in a file name */
 .input[type="color"] { width: 56px; flex: none; padding: 2px; }
 .seg > button:disabled { color: var(--text3); }
 .keys { display: inline-flex; gap: 2px; }
@@ -137,12 +139,14 @@ h3 { font-size: 13px; line-height: 16px; font-weight: 500; }
 .mon { display: flex; flex-direction: column; gap: var(--s1); }
 .group .mon + .mon { margin-top: var(--s2); }
 .mon-name.sel { color: var(--accent); }
-.actions { display: flex; flex-direction: column; gap: var(--s2); margin-top: auto; padding-top: var(--s3); }
+/* The actions stay in view at the foot of the inspector while its groups scroll. */
+.actions { position: sticky; bottom: calc(-1 * var(--s4)); display: flex; flex-direction: column; gap: var(--s2); margin: auto calc(-1 * var(--s4)) calc(-1 * var(--s4)); padding: var(--s3) var(--s4) var(--s4); background: var(--bg); border-top: 1px solid var(--line); }
 .btn.action { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
 
 /* ---- footer ---- */
 .mon-label { color: var(--text); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 .status .result { min-width: 0; }
+.status .cell.danger { color: var(--danger); }
 .result-text { overflow: hidden; text-overflow: ellipsis; }
 .status .btn.compact { height: 20px; }
 
