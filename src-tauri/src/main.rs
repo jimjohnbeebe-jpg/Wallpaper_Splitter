@@ -3,26 +3,36 @@
 //   commands   the Tauri commands, thin wrappers over the modules below
 //   geometry   desk millimetres -> per-monitor crop rectangles and the span canvas (the only layout maths)
 //   monitors   connected monitors, EDID physical size, ids
-//   decode     every source format -> linear BT.709 f32 (+ SDR rendition)
+//   edid       EDID parsing: monitor name and size in mm (pure)
+//   decode     sniffing, ImageInfo, preview proxies, loading every source format into a Source
+//   uhdr       Ultra HDR gain-map JPEG decode (ISO 21496-1 first) and encode (preview proxies)
+//   wic        Windows Imaging Component: AVIF decode, scRGB JPEG XR encode
+//   source     compact decoded pixels -> linear BT.709 f32 per crop, Lanczos3 resize
 //   color      transfer functions, gamut matrices, tone mapping
-//   export     resize, PNG/JPG/JXR writing, file naming
+//   export     PNG/JPG/JXR writing, file naming, the span image
 //   wallpaper  IDesktopWallpaper, JPEGImportQuality
 //   hdr        DisplayConfig HDR state per monitor
 //   settings   %APPDATA%\WallpaperSplitter\settings.json, atomic writes
-//   preview    the per-monitor full-screen and identify windows
+//   preview    the open full-screen preview and identify state (Tauri managed state)
+//   preview_win  the per-monitor borderless windows and the HDR switch around the preview
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod color;
 mod commands;
 mod decode;
+mod edid;
 mod export;
 mod geometry;
 mod hdr;
 mod model;
 mod monitors;
 mod preview;
+mod preview_win;
 mod settings;
+mod source;
+mod uhdr;
 mod wallpaper;
+mod wic;
 
 fn main() {
     tauri::Builder::default()
@@ -32,6 +42,10 @@ fn main() {
             commands::open_image,
             commands::pick_image,
             commands::compute_layout,
+            commands::default_placement,
+            commands::preview_state,
+            commands::preview_nudge,
+            commands::preview_grid,
             commands::get_settings,
             commands::save_settings,
             commands::set_hdr,
@@ -42,6 +56,12 @@ fn main() {
             commands::apply,
             commands::open_folder,
         ])
-        .run(tauri::generate_context!())
-        .expect("Wallpaper Splitter failed to start");
+        .build(tauri::generate_context!())
+        .expect("Wallpaper Splitter failed to start")
+        .run(|app, event| {
+            // HDR the preview switched on goes back off however the app ends.
+            if let tauri::RunEvent::Exit = event {
+                preview::restore_hdr(app);
+            }
+        });
 }

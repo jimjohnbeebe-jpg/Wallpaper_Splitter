@@ -101,6 +101,8 @@ pub struct Tile {
     pub upscale: f64,
 }
 
+/// The spanning image: the bounding box of every monitor's Windows pixel rectangle. Tile i is pasted at
+/// (monitor.px.x - origin_x, monitor.px.y - origin_y). Built by geometry::span_canvas, used by export.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Span {
@@ -113,7 +115,41 @@ pub struct Span {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Layout {
     pub tiles: Vec<Tile>,
-    pub span: Span,
+}
+
+/// Starting arrangement for the Monitors page: Windows' left-to-right/top-to-bottom order, edges
+/// touching plus `bezel_mm`, aligned by top, centre or bottom edge (the old script's three modes).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Align {
+    Top,
+    #[default]
+    Center,
+    Bottom,
+}
+
+/// What a secondary window (label `preview-<i>` or `identify-<i>`, page `preview.html`) shows.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum PreviewState {
+    #[serde(rename_all = "camelCase")]
+    Preview {
+        preview_path: String,
+        image_w: u32,
+        image_h: u32,
+        tile: Tile,
+        monitor: PlacedMonitor,
+        fill: String,
+        grid: bool,
+        selected: bool,
+    },
+    #[serde(rename_all = "camelCase")]
+    Identify {
+        number: u32,
+        name: String,
+        px_w: u32,
+        px_h: u32,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -131,7 +167,6 @@ pub struct Prefs {
     pub folder: String,
     pub template: String,
     pub span: bool,
-    pub apply_after_export: bool,
     pub fill: String,
     pub jpeg_import_fix: bool,
     pub hdr_output: bool,
@@ -148,7 +183,6 @@ impl Default for Prefs {
             folder: String::new(),
             template: "{image}_{monitor}_{w}x{h}".into(),
             span: false,
-            apply_after_export: true,
             fill: "#000000".into(),
             jpeg_import_fix: false,
             hdr_output: true,

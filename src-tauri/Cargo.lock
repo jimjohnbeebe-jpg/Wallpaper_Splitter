@@ -4255,6 +4255,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
+ "ultrahdr-core",
  "ultrahdr-rs",
  "windows",
  "zune-jpeg",

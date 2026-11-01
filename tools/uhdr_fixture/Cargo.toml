@@ -1,0 +1,12 @@
+[package]
+name = "uhdr_fixture"
+version = "0.0.0"
+description = "Writes the synthetic Ultra HDR test fixture (called by tools/gen_fixtures.py)."
+edition = "2021"
+license = "MIT"
+publish = false
+
+[dependencies]
+# Same pins as src-tauri/Cargo.toml. ultrahdr-rs without default features: no AGPL zencodec/zenjpeg.
+ultrahdr-rs = { version = "=0.3.5", default-features = false }
+image = { version = "=0.25.10", default-features = false, features = ["jpeg"] }

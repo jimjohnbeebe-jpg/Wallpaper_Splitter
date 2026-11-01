@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "The main window and the per-monitor preview windows (preview-*). The app's own commands are registered in main.rs.",
   "windows": ["main", "preview-*", "identify-*"],
-  "permissions": ["core:default", "dialog:default"]
+  "permissions": ["core:default", "core:window:allow-destroy", "dialog:default"]
 }
