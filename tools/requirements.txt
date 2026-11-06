@@ -1,4 +1,4 @@
 imagecodecs==2026.10.10
 numpy==2.5.4
 tifffile==2026.10.15
-pillow==12.3.0
+pillow==13.0.0
