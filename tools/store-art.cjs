@@ -1,5 +1,7 @@
-// Renders the app icons and Microsoft Store listing art to PNG with Playwright: node tools/store-art.cjs <out-dir>.
-// Then: python3 tools/store-art-ico.py <out-dir>, and copy icons/ to src-tauri/icons, msix/ to packaging/msix/Assets, store/ to docs/store.
+// Renders the app icons and Microsoft Store listing art to PNG with Playwright (a dev dependency).
+// Setup, once: npm ci; npx playwright install chromium; pip install -r tools/requirements.txt (for Pillow).
+// Run: node tools/store-art.cjs <out-dir>; python tools/store-art-ico.py <out-dir>. Then copy <out-dir>/icons to
+// src-tauri/icons (without ico/), <out-dir>/msix to packaging/msix/Assets and <out-dir>/store to docs/store.
 // Colours are the DESIGN.md tokens; the landscape is flat bands (no gradients), one scene seen through several panes.
 const { chromium } = require("playwright");
 const path = require("path");
