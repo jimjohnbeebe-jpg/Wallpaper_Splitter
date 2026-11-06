@@ -57,6 +57,11 @@ button { background: none; border: 0; padding: 0; cursor: default; }
 .btn.secondary { border: 1px solid var(--line); font-weight: 500; }
 .btn.secondary:hover { background: var(--hover); }
 .btn.secondary:active { background: var(--press); }
+/* The Source group's Open button once an image is open: accent outline, so it stands out without competing with Set wallpaper. */
+.btn.open { border: 1px solid var(--accent); color: var(--accent); }
+.btn.open:hover { background: var(--hover); }
+.btn.open:active { background: var(--press); }
+.btn.open .key { color: var(--accent); border-color: var(--accent); }
 .btn.compact { height: 24px; padding: 0 var(--s2); font-size: 12px; font-weight: 500; border: 1px solid var(--line); }
 .btn.compact:hover { background: var(--hover); }
 .btn:disabled, .btn.primary:disabled { background: none; border: 1px solid var(--line); color: var(--text3); }
