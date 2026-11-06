@@ -51,6 +51,7 @@ cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings &
 - Version is in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, which must agree.
 - Tagging `v<version>` runs `.github/workflows/release.yml`. It builds the portable exe (`tauri build --no-bundle`) and attaches `WallpaperSplitter-<version>.exe` and `SHA256SUMS.txt` to a **draft** release.
 - Without a local git push (a work computer, or a cloud session, which may push only its own branch): Actions > release > Run workflow on `main` with **release** ticked. The run creates the tag `v<version>` on the commit it built, then the same draft release. It refuses to run from another branch or when the tag already exists.
+- Microsoft Store: the Partner Center developer account is **jimjohnbeebe@gmail.com** (Individual, identity verified 2026-11-06). An earlier sign-up with jim@maybellc.com broke off at ID verification and is not the account to use.
 - When the repository variables `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME` are set (from Partner Center > Product identity), the release also builds `WallpaperSplitter-<version>.msix` for the Microsoft Store with `packaging/msix/stage.ps1`. The package is unsigned, because the Store signs it.
 - In the MSIX build, HKCU writes are virtualised, so `wallpaper::packaged()` turns the JPEG import fix off and the UI hides it.
 - Jim publishes the release himself. The exe is unsigned.
