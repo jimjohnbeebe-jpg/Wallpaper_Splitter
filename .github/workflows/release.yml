@@ -1,6 +1,8 @@
 # A v* tag builds the portable exe (and the Store MSIX) and attaches them, with SHA256SUMS.txt, to a draft GitHub release
 # (a pre-release when the tag has a suffix, v1.0.0-rc.1); Jim publishes the draft. A PR that touches
 # this file or the Tauri config builds the same exe without releasing it.
+# Run workflow (workflow_dispatch) on main with "release" ticked does the same without a local git push: it creates
+# the tag v<version> on the commit it built, then the draft release. Without the box it only builds.
 name: release
 
 on:
@@ -14,6 +16,11 @@ on:
       - src-tauri/tauri.conf.json
       - src-tauri/Cargo.toml
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Tag main as v<version> and draft the release"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -47,6 +54,16 @@ jobs:
             "v$VERSION" | "v$VERSION"-rc.*) echo "tag $GITHUB_REF_NAME, version $VERSION" ;;
             *) echo "tag $GITHUB_REF_NAME does not match version $VERSION"; exit 1 ;;
           esac
+      # Checked before the build, so a wrong branch or a reused version fails in seconds rather than after it.
+      - name: Release preflight (Run workflow with release ticked)
+        if: github.event_name == 'workflow_dispatch' && inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "release runs only from main, not $GITHUB_REF"; exit 1; }
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" > /dev/null 2>&1; then
+            echo "tag v$VERSION already exists: bump the version before releasing again"; exit 1
+          fi
       - run: npm ci
       - run: npm run build
       - name: Stage
@@ -74,12 +91,21 @@ jobs:
           name: exe
           path: release/*
           if-no-files-found: error
-      - name: Draft release
-        if: startsWith(github.ref, 'refs/tags/')
+      # A tag made with github.token starts no new workflow run, so this run is the only one that releases it.
+      - name: Tag (Run workflow with release ticked)
+        if: github.event_name == 'workflow_dispatch' && inputs.release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/v$VERSION" -f sha="$GITHUB_SHA"
+          echo "RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
+      - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${RELEASE_TAG:-$GITHUB_REF_NAME}"
           pre=""
-          case "$GITHUB_REF_NAME" in *-*) pre="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" release/WallpaperSplitter-* release/SHA256SUMS.txt \
-            --draft $pre --verify-tag --title "Wallpaper Splitter $GITHUB_REF_NAME" --generate-notes
+          case "$tag" in *-*) pre="--prerelease" ;; esac
+          gh release create "$tag" release/WallpaperSplitter-* release/SHA256SUMS.txt \
+            --draft $pre --verify-tag --title "Wallpaper Splitter $tag" --generate-notes
