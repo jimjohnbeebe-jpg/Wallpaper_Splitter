@@ -18,8 +18,11 @@ export function inspector(app: App) {
 
   function source(): HTMLElement {
     const img = st.image;
-    const open = h("button", { type: "button", class: "btn compact", onclick: () => void app.pick() }, "Open…");
-    if (!img) return h("div", { class: "group" }, h("h2", {}, "Source"), h("p", { class: "muted" }, "No image open."), h("div", {}, open));
+    // Starting over with a new image is the Source group's one job, so its button is full size and in the accent:
+    // filled while nothing is open (Set wallpaper is disabled then), outlined once Set wallpaper takes the fill.
+    const open = h("button", { type: "button", class: `btn action ${img ? "open" : "primary"}`, onclick: () => void app.pick() },
+      h("span", { class: "label" }, img ? "Open another image…" : "Open image…"), keys("Ctrl", "O"));
+    if (!img) return h("div", { class: "group" }, h("h2", {}, "Source"), h("p", { class: "muted" }, "No image open."), open);
     return h("div", { class: "group" },
       h("h2", {}, "Source"),
       h("p", { class: "name", title: img.path }, basename(img.path)),
@@ -27,7 +30,7 @@ export function inspector(app: App) {
         h("span", { class: "num muted" }, `${img.width} × ${img.height} px`),
         h("span", { class: "badge" }, FORMAT_NAMES[img.format] ?? img.format),
         img.hdr ? h("span", { class: "badge accent" }, "HDR") : null),
-      h("div", {}, open));
+      open);
   }
 
   function framing(): HTMLElement {
