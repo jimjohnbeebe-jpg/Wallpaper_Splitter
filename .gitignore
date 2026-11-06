@@ -15,6 +15,7 @@ New folder/
 !src-tauri/icons/*.png
 !docs/screenshots/*.png
 !packaging/msix/Assets/*.png
+!docs/store/*.png
 
 # Build output
 node_modules/

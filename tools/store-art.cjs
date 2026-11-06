@@ -113,6 +113,8 @@ const JOBS = [
   ["store/hero-3840x2160.png", 3840, 2160, () => hero(3840, 2160)],
   ["store/hero-1920x1080.png", 1920, 1080, () => hero(1920, 1080)],
   ["store/logo-300x300.png", 300, 300, () => icon(300)],
+  ["store/logo-150x150.png", 150, 150, () => icon(150)],
+  ["store/logo-75x75.png", 75, 75, () => icon(75, { small: true })],
 ];
 
 (async () => {
